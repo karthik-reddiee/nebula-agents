@@ -483,3 +483,81 @@ back into scope; do not pre-decide.
 - Tool-agnostic — nothing in `agents/**` names Claude Code, Cursor, or any
   orchestrator. New CLIs are plain Python invocations the same as
   `lookup.py`.
+
+---
+
+## 13. Rollout state (2026-05-18)
+
+The rollout in §10 is complete. Commits below are on
+`feat/knowledge-graph-optimization` in each repo.
+
+| Phase | Deliverable | Status | Commits |
+|---|---|---|---|
+| A1+A2 | C# + TS compilation-root, sidecar, `end_line` | Shipped | `e8f3493` (nebula-insurance-crm) |
+| A3 | Python plumbing, `is_test` propagation, orchestrator persist of `implements` | Shipped | `39f0f21` (nebula-insurance-crm) |
+| B(a-i) | `lookup.py --callers-only`, `--callees-only`, `--defines` | Shipped | `8214b06` (nebula-insurance-crm) |
+| B(b) | `diff-impact.py` | Shipped | `3393410` (nebula-insurance-crm) |
+| B(c) | `coverage-gaps.py` | Shipped | `36f414f` (nebula-insurance-crm) |
+| B(a-ii) | `lookup.py --implementers`, `--overrides` | Shipped | `9c03c96` (nebula-insurance-crm) |
+| C | Architect / backend / frontend / ai-engineer / code-reviewer + `actions/review.md` / security / devops / product-manager / technical-writer SKILL wirings | Shipped | `ce51538` (nebula-agents) |
+| C tag-on | `--implementers` / `--overrides` references in architect, backend, frontend, code-reviewer | Shipped | `980de52` (nebula-agents) |
+| D (validator) | `validate.py --check-coverage-gaps` + `--check-untested` (with `*-as-errors` and exemption flags) | Shipped | `e74aef2` (nebula-insurance-crm) |
+| D (gate + wiring + guide) | `kg_coverage_gap_check` gate in `lifecycle-stage-template.yaml`, quality-engineer SKILL §4 + `actions/test.md` Step 1, full refresh of `symbol-index-guide.md` | Shipped | `e8997a0` (nebula-agents) |
+| D (guide refresh) | `dead-code-review-guide.md` extended to weave the sidecar / coverage-gaps as the automated form of the grep step; grep retained as fallback per §Phase D caution | Shipped | `89f0f64` (nebula-agents) |
+| Deferred (item 1, partial) | `instantiates` + `type_refs` edges added to C# and TS extractors; orchestrator gains cross-node `by_top_level_type_name` index; attribute-access deferred on measurement | Shipped | this commit (both repos) |
+| Deferred (item 2) | `signature-search` not implemented; measurement plan documented for `--defines` empty-rate signal over one feature cycle | Documented only | this commit |
+
+Smoke-test reality on the product baseline at the time of shipping:
+
+- Phase A regeneration produced 2332 symbols (2074 C#, 258 TS), 245 with
+  populated `implements:`, and 7 entries in
+  `unbound-but-referenced.yaml`.
+- `validate.py --check-coverage-gaps` warns on 2 real findings after the
+  baked-in test/migration/scripts/tools exclusions strip the 5
+  test-as-source entries.
+- `validate.py --check-untested` warns on 447 findings — the current
+  test-coverage baseline. Gate is warn-only so this surfaces the gap
+  without blocking release-readiness.
+- `diff-impact.py` against a recent F0020 commit returned 348 changed
+  symbols, 35 hop-1/2 callers, and 10 canonical nodes affected.
+
+### Deferred — measurement triggers (updated 2026-05-19)
+
+The following remain deferred. Triggers below are what would surface them
+back into scope. Do not pre-decide; the work below is gated on signal,
+not on a deadline.
+
+- **`references` edge kind — attribute-access subset.** The instantiation
+  and type-ref subsets shipped (commit on this branch; +2,118 edges, 0.5x
+  the existing baseline, cross-node visible). Attribute-access was
+  measured at ~25k edges on the same product (~5.7x baseline) and
+  deferred. Trigger to revisit: agent demand for "which fields/properties
+  reference this entity" that `lookup.py --symbol`, `--implementers`, and
+  the new `instantiates` / `type_refs` arrays can't already satisfy.
+- **`signature-search`.** Trigger: telemetry from `lookup.py` shows
+  `query_kind="defines"` events with `empty_scope=true` accumulating
+  over a feature cycle while agents proceed to find the symbol by other
+  means. Operational measurement plan:
+
+  | Metric | How to read | Action threshold |
+  |---|---|---|
+  | `--defines` empty-result rate | Filter `.kg-state/telemetry.jsonl` by `tool=lookup`, `payload.query_kind=defines`, `payload.empty_scope=true` over one full feature cycle | >30% empty rate → prototype the `name+arity` index variant as a flag on lookup.py |
+  | Recovery path | When `--defines` returns empty, observe what the agent invoked next (typically `grep`, `Read`, or `hint.py --symbol`) | If `grep`/`Read` dominates the recovery path, signature-search is the real gap; if `hint.py` recovers, the issue is naming not signature |
+  | Cost ceiling | Whichever variant we pick, the added telemetry event budget per query stays within the existing `tokens_estimated` envelope | Reject any variant that doubles per-query token cost |
+
+  No design decision pre-committed. The three options remain on the
+  table: regex over `signature` strings, a `name+container+arity`
+  in-memory index, or LLM-aided semantic search. The cheapest variant
+  (name+arity) is likely the first prototype if and when the threshold
+  fires.
+- **Python semantic-engine swap (Jedi or Pyright).** Trigger: a product
+  acquires enough Python surface to measure resolution accuracy
+  meaningfully. The swap is local to `PythonAstExtractor.extract()` —
+  the sidecar contract and orchestrator interface from §1 stay stable
+  across the swap, so this is purely a quality-of-edges upgrade.
+- **`dead-code-review-guide.md` grep-step removal.** Trigger: the
+  sidecar produces stable findings across several regenerations on the
+  product and is shown to subsume the grep step. Measurement window is
+  open — the current refresh weaves the sidecar in as an automated
+  pre-step but does not remove grep, per the memo's caution about
+  stripping a working fallback before its replacement is proven.

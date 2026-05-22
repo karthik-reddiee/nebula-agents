@@ -8,4 +8,4 @@ venv/
 .vscode/
 .DS_Store
 *.swp
-_private-plans/semantic-agent-tooling-prompt.md
+_private-plans/**

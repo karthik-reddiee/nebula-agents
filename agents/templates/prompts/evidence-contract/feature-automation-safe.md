@@ -1,0 +1,246 @@
+ACTION: agents/actions/feature.md
+CONTRACT: feature-evidence-package-standardization-plan-v2.md (effective 2026-05-19)
+
+SESSION_SETUP:
+- Resolve {PRODUCT_ROOT} per agents/docs/AGENT-USE.md → Session Setup
+- Echo the resolved absolute {PRODUCT_ROOT} path on the first turn before any shell command
+- Generate {RUN_ID} once at session start using the contract format:
+    date  = local date in ISO YYYY-MM-DD
+    suffix = `python3 -c "import secrets; print(secrets.token_hex(4))"`
+    RUN_ID = {date}-{suffix}                  # example: 2026-05-19-5ab6f922
+  DO NOT use uuid4. DO NOT regenerate {RUN_ID} after the session starts.
+- Create the evidence root and run folder:
+    EVIDENCE_ROOT = {PRODUCT_ROOT}/planning-mds/operations/evidence/{FEATURE_ID}-{slug}
+    RUN_FOLDER    = {EVIDENCE_ROOT}/{RUN_ID}
+    mkdir -p {RUN_FOLDER}/artifacts/{coverage,diffs,test-results,security,screenshots}
+- Initialize {RUN_FOLDER}/evidence-manifest.json from agents/templates/evidence-manifest-template.json with:
+    schema_version=1, feature_id={FEATURE_ID}, feature_slug={slug}, run_id={RUN_ID},
+    status="draft", recorded_on={today}, contract_effective_date=2026-05-19,
+    feature_path_at_run_start={FEATURE_PATH}, feature_path_at_closeout=null,
+    feature_state="In Progress", rerun_of=null,
+    changed_paths=[], scm={base_ref, head_ref, diff_artifact:"artifacts/diffs/changed-files.txt"},
+    runtime_bearing/deployment_config_changed/frontend_in_scope/security_sensitive_scope = false (revise as scope is discovered),
+    required_roles=[], gate_results={}, files={...skeleton...}, role_results={...skeleton...},
+    omissions=[], waivers={}, global_evidence_refs={}
+- Create {RUN_FOLDER}/README.md, action-context.md, artifact-trace.md, gate-decisions.md from templates
+- Touch {RUN_FOLDER}/commands.log and {RUN_FOLDER}/lifecycle-gates.log (empty JSONL/log)
+- Capture prior approved {RUN_ID_PRIOR} if {EVIDENCE_ROOT}/latest-run.json exists (for G4.7 supersession patch)
+- Concurrent-run check: scan {EVIDENCE_ROOT}/ for any run folder OTHER than {RUN_FOLDER} whose evidence-manifest.json carries status="draft" or status="in-progress". If one exists, HALT and reconcile externally before proceeding; the v2 contract assumes serial feature actions per feature (§17). Acceptable states for sibling runs: status="approved" with prior-run supersession handled at G4.7, status="superseded", or no sibling runs at all.
+- All paths and commands below assume the above resolution and run folder
+
+PARAMETERS:
+  FEATURE_ID:          {F####}
+  FEATURE_PATH:        {PRODUCT_ROOT}/planning-mds/features/{F####-slug}      # POSIX
+  MODE:                {clean | drift-reconcile}
+  SLICE_ORDER_SOURCE:  {assembly-plan | override}
+  # If override:
+  # SLICE_ORDER:
+  #   - {F####-S####}
+  #   - [{F####-S####}, {F####-S####}]   # brackets = parallel within entry
+  RUN_ID:              {YYYY-MM-DD-[a-z0-9]{8}; generated per SESSION_SETUP}
+  RERUN_OF:            {null | prior approved {RUN_ID}}   # set when this run regenerates evidence only
+
+TIER DEFAULTS (start_tier, max_auto_tier):
+  clean:            1, 2
+  drift-reconcile:  3, 4
+
+PRIMARY_SPEC: {FEATURE_PATH}/feature-assembly-plan.md
+
+PRECONDITIONS:
+- Plan action signed off for {FEATURE_ID}
+- PRIMARY_SPEC exists
+- Required runtime containers healthy (per feature.md "Runtime Preflight & Failure Triage")
+- `python3 {PRODUCT_ROOT}/scripts/kg/validate.py` exits 0 at start
+- {RUN_FOLDER} created and initial evidence-manifest.json present
+- {RUN_FOLDER} is empty other than skeleton files (no stale artifacts from a prior session)
+
+CONTEXT LOADING ORDER (navigate; do not eager-load):
+1. agents/ROUTER.md
+2. agents/agent-map.yaml
+3. agents/docs/AGENT-USE.md
+4. agents/actions/feature.md
+5. `python3 {PRODUCT_ROOT}/scripts/kg/lookup.py {FEATURE_ID} --tier {start_tier} --run-id {RUN_ID} --telemetry-file {PRODUCT_ROOT}/.kg-state/telemetry.jsonl`
+   — FIRST-PASS scope resolver; raw artifacts win on conflict.
+6. {FEATURE_PATH}/**   (PRIMARY_SPEC is required reading)
+
+ON-DEMAND (only if linked by lookup, required by current gate, or required by drift repair):
+- {PRODUCT_ROOT}/planning-mds/knowledge-graph/solution-ontology.yaml
+- {PRODUCT_ROOT}/planning-mds/api/<openapi-spec>.yaml
+- {PRODUCT_ROOT}/planning-mds/security/authorization-matrix.md
+- {PRODUCT_ROOT}/planning-mds/security/policies/policy.csv
+- {PRODUCT_ROOT}/planning-mds/knowledge-graph/*.yaml beyond what lookup output already covers
+- agents/<role>/references/** — only with a ROUTER.md row match
+
+FORBIDDEN:
+- Generating {RUN_ID} with uuid4 or any non-contract format
+- Writing or consuming `current-run.json` for any reason
+- Writing `latest-run.json` before G4.7 final validation passes
+- Leaving a prior approved manifest at `status: approved` after writing a new approval (must be patched to `superseded`)
+- Skipping per-gate `validate-feature-evidence.py --stage` calls
+- Writing terminal-feature role reports into {FEATURE_PATH} instead of {RUN_FOLDER}
+- Citing the global frontend evidence lane (frontend-quality/ or frontend-ux/) as a substitute for a feature-level role report (rule frontend_global_substituted_for_feature_report_fails); global lanes may be LINKED from feature evidence but never replace the feature's test-execution-report.md or other role reports
+- Hand-enumerating schema/ADR/contract files when lookup output is available
+- Treating lookup/KG mappings as authoritative over raw artifacts
+- Editing code without prior `hint.py <path>`
+- Editing shared semantics without prior `blast.py <node>`
+- Continuing after runtime-blocked failure without re-running preflight
+- Skipping any gate (G0–G4.7)
+- Declaring Done without PM agent switch at G4.7
+- Scope widening outside {FEATURE_ID}
+- Climbing past max_auto_tier without a workstate.py escalate event
+- Passing `--evidence-effective-date` earlier than the framework default
+
+REQUIRED TOOL INVOCATIONS:
+- `python3 {PRODUCT_ROOT}/scripts/kg/workstate.py --state-file {PRODUCT_ROOT}/.kg-state/{FEATURE_ID}-feature.yaml init --role feature --scope {FEATURE_ID} --run-id {RUN_ID} --mode {MODE}`
+- `workstate.py decision --topic <slug>` after each gate pass
+- `workstate.py touch <path>` after significant file changes
+- `workstate.py dump --compact` after any compaction event
+- `workstate.py escalate <reason>` on INSUFFICIENT_CONTEXT
+- `hint.py <path> --run-id {RUN_ID} --telemetry-file {PRODUCT_ROOT}/.kg-state/telemetry.jsonl` before any Grep/Glob on code
+- `blast.py <node-id> --run-id {RUN_ID} --telemetry-file {PRODUCT_ROOT}/.kg-state/telemetry.jsonl` before shared-semantics edits
+- `cochange.py --coverage-gaps` once per feature in clean mode (at session start); at start + before closeout in drift-reconcile; NOT per slice
+- Stage validation after every gate's artifact is written:
+  `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --run-id {RUN_ID} --stage {GATE}` (must exit 0; warnings allowed)
+- Every shell command must be appended as a JSONL line to {RUN_FOLDER}/commands.log per §13 schema (schema_version, timestamp with timezone, cwd, command, exit_code, artifacts[], redactions[])
+
+OWNERSHIP:
+- product-manager owns: STATUS.md closeout, trackers, archive moves, feature-mappings.yaml path/status updates, pm-closeout.md, evidence-manifest.json finalize (status: approved), prior-manifest supersession patch, latest-run.json write, signoff-ledger.md
+- architect owns: feature-assembly-plan.md, canonical-nodes.yaml, solution-ontology.yaml, ADRs, API contracts, schemas, authorization, g0-assembly-plan-validation.md
+- quality-engineer owns: test-plan.md, test-execution-report.md, coverage-report.md (and any waiver entry inside it)
+- code-reviewer owns: code-review-report.md
+- security-reviewer owns: security-review-report.md (when required by security_sensitive_scope or STATUS matrix)
+- devops owns: g1-runtime-preflight.md (when runtime_bearing), deployability-check.md
+- feature orchestrator owns: g2-self-review.md, feature-action-execution.md, artifact-trace.md, gate-decisions.md, scope booleans in manifest, changed_paths[]
+- other roles: flag drift; do not redefine canonical shared semantics
+
+SLICE EXECUTION:
+- SLICE_ORDER_SOURCE=assembly-plan: read sequence from PRIMARY_SPEC; do not reorder
+- SLICE_ORDER_SOURCE=override: follow SLICE_ORDER verbatim; brackets = parallel within that entry only; no cross-slice parallelism
+
+MODE BEHAVIOR:
+- clean: assume alignment; drift discovered blocks approval until reconciled
+- drift-reconcile: repair code/contract/policy/KG divergence in the same change set; silent reconciliation FORBIDDEN
+
+GATES (sequential, all mandatory; manifest status transitions: draft@G0 → in-progress@G1..G4.6 → approved@G4.7 → superseded later):
+
+G0   ARCHITECT ASSEMBLY PLAN VALIDATION
+     - Produce {RUN_FOLDER}/g0-assembly-plan-validation.md (Result: PASS|PASS WITH RECOMMENDATIONS|FAIL)
+     - Update manifest gate_results.assembly_plan_validation, status="draft" (initial) then "in-progress" after G0 pass
+     - `validate-feature-evidence.py --stage G0 --run-id {RUN_ID}` exit 0
+
+G1   RUNTIME PREFLIGHT
+     - If runtime_bearing=true: produce {RUN_FOLDER}/g1-runtime-preflight.md with command evidence; else record manifest omission per §10
+     - `validate-feature-evidence.py --stage G1 --run-id {RUN_ID}` exit 0
+
+G2   SELF-REVIEW + QE + DEPLOYABILITY (per role, with evidence paths)
+     - Reconcile manifest conditional booleans against discovered scope BEFORE running G2 stage validation:
+         * frontend_in_scope = true if any changed_paths[] entry matches experience/** or other frontend globs (§7)
+         * runtime_bearing = true if any entry matches engine/** runtime, tests, or AI runtime globs
+         * deployment_config_changed = true if any entry matches Dockerfile, docker-compose, .github/workflows, ci/, env/config globs, or migrations
+         * security_sensitive_scope = true if any entry matches auth/identity/permissions/security/secrets globs
+       Any flip from false→true also forces the corresponding required role and artifact per §7; update required_roles[] and role_results accordingly. Booleans that change after G2 also force re-running --stage G2.
+     - {RUN_FOLDER}/g2-self-review.md
+     - {RUN_FOLDER}/test-plan.md, test-execution-report.md, coverage-report.md (report always exists; waiver allowed inside report when coverage cannot be produced)
+     - {RUN_FOLDER}/deployability-check.md (always required; booleans must match manifest)
+     - Update manifest gate_results.self_review and role_results.Quality Engineer / DevOps
+     - `validate-feature-evidence.py --stage G2 --run-id {RUN_ID}` exit 0
+
+G3   CODE + SECURITY REVIEW (parallel)
+     - {RUN_FOLDER}/code-review-report.md (Result: APPROVED|APPROVED WITH RECOMMENDATIONS|REQUEST CHANGES|REJECTED)
+     - {RUN_FOLDER}/security-review-report.md when security_sensitive_scope=true or Security required in STATUS
+     - `validate-feature-evidence.py --stage G3 --run-id {RUN_ID}` exit 0
+
+G4   APPROVAL — critical=0; high requires explicit mitigation token recorded in gate-decisions.md
+
+G4.5 SIGNOFF
+     - Every Required=Yes role: verdict={PASS|APPROVED}(|WITH RECOMMENDATIONS), reviewer, ISO date, evidence path under {RUN_FOLDER}/**
+     - STATUS.md story rows updated (append-only); Story column values match `F####-S####` and feature's local story breakdown
+     - {RUN_FOLDER}/signoff-ledger.md mirrors current STATUS rows
+     - For any verdict ending in WITH RECOMMENDATIONS, the underlying role report must satisfy ALL 5 §15 closeout-passing conditions (else the verdict is blocking, not passing):
+         1. each recommendation marked non-blocking or deferred (rule recommendation_ambiguous_fails)
+         2. each recommendation has severity (rule recommendation_missing_severity_fails)
+         3. each recommendation has owner and follow-up disposition (rule recommendation_missing_owner_fails)
+         4. PM acceptance recorded in pm-closeout.md (and optionally signoff-ledger.md) — landed at G4.7, but the role report must already name what PM is being asked to accept
+         5. no blocking findings hidden as recommendations (rule blocking_language_with_pass_fails) — high/critical or blocking language with a passing verdict fails unless explicitly mitigated
+     - `validate-feature-evidence.py --stage G4.5 --run-id {RUN_ID}` exit 0
+
+G4.6 CANDIDATE EVIDENCE VALIDATION (no PM closeout artifacts yet)
+     - {RUN_FOLDER}/feature-action-execution.md present (gate timeline)
+     - Manifest is a pre-closeout candidate (pm_closeout, tracker_sync, latest-run.json all pending)
+     - `validate-feature-evidence.py --stage G4.6 --run-id {RUN_ID}` exit 0
+     - THEN: `python3 agents/product-manager/scripts/validate-trackers.py --feature {FEATURE_ID} --run-id {RUN_ID}` exit 0
+       (validate-trackers.py internally calls validate-feature-evidence.py --stage G4.6 per §22 integration)
+     - Append every lifecycle validator command (tracker, story-index, KG validators, validate_templates) to {RUN_FOLDER}/lifecycle-gates.log
+
+G4.7 PM CLOSEOUT (PM agent role switch is mandatory)
+     - MUST read agents/product-manager/SKILL.md before executing (explicit role switch)
+     - Write {RUN_FOLDER}/pm-closeout.md (Result: APPROVED|APPROVED WITH RECOMMENDATIONS|REJECTED)
+     - Finalize {RUN_FOLDER}/evidence-manifest.json: status="approved", feature_state in {Done|Completed|Archived}, feature_path_at_closeout resolved, all gate_results present
+     - IF a prior approved manifest exists at {EVIDENCE_ROOT}/{RUN_ID_PRIOR}/evidence-manifest.json: patch its status to "superseded" (rule two_approved_runs_without_supersession_fails)
+     - Write {EVIDENCE_ROOT}/latest-run.json (schema per §12) pointing to {RUN_FOLDER}
+     - Final validation: `validate-feature-evidence.py --stage closeout` exit 0
+       (no --run-id; resolves via latest-run.json)
+
+G4.6 CANDIDATE CHECKLIST:
+- Confirm all G0–G4.5 evidence present and verdicts passing
+- feature-action-execution.md complete with gate-by-gate timeline
+- Manifest status="in-progress", gate_results through signoff present, pm_closeout/tracker_sync absent or required:false
+- changed_paths[] populated; conditional booleans cross-check against §7 path-class globs (rule scope_boolean_false_with_changed_paths_fails)
+- scm.diff_artifact resolves and lists changed files (or empty only if RERUN_OF set)
+- All non-required role/gate artifacts that are absent appear in manifest omissions[] (do not double-count when role_results.<role>.required=false; see §11)
+
+G4.7 PM CLOSEOUT CHECKLIST (run after G4.6 + tracker sync):
+- Read agents/product-manager/SKILL.md (explicit role switch)
+- Update {FEATURE_PATH}/STATUS.md: final overall status, deferred follow-ups, mitigation notes, signoff provenance (append-only; no mutation)
+- Update {PRODUCT_ROOT}/planning-mds/features/REGISTRY.md: status/path transitions (include archive move; set Archived Date when archiving)
+- Update {PRODUCT_ROOT}/planning-mds/features/ROADMAP.md: Now/Next/Later/Completed placement
+- Update {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md: feature/story status labels and links
+- IF overall_status in {Done|Completed}: move {FEATURE_PATH} to {PRODUCT_ROOT}/planning-mds/features/archive/{F####-slug}/ and fix impacted links
+- Update {PRODUCT_ROOT}/planning-mds/knowledge-graph/feature-mappings.yaml: feature path, status, story status
+- Update {PRODUCT_ROOT}/planning-mds/knowledge-graph/code-index.yaml: bindings for every new source file introduced by this feature
+- Update canonical-nodes.yaml ONLY if new shared semantics introduced (route to Architect if so)
+- Capture orphaned stories and deferred follow-ups in pm-closeout.md
+- IF KG changed: `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --write-coverage-report`
+- `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-drift` MUST exit 0
+- Write pm-closeout.md (Final Story Status, Archive Decision, Deferred Follow-ups, Recommendation Acceptances, Tracker Updates, Validator Results)
+- Finalize evidence-manifest.json (status="approved")
+- IF {RUN_ID_PRIOR} captured at SESSION_SETUP: patch {EVIDENCE_ROOT}/{RUN_ID_PRIOR}/evidence-manifest.json to status="superseded"
+- Write {EVIDENCE_ROOT}/latest-run.json (schema_version=1, feature_id, run_id={RUN_ID}, run_path, manifest_path, status="approved", approved_on={today})
+- Run final `validate-feature-evidence.py --stage closeout` and confirm exit 0
+
+VALIDATOR-DEFECT FALLBACK (only if a validator defect blocks closeout):
+- Fix the validator and re-run is preferred
+- Mid-stage discovery (G0..G4.6): do NOT create the waiver entry yet. Log the defect as an open follow-up in the run's README.md "Open Follow-ups" section with the defect description and affected rule IDs; continue to the next gate. If the defect is fixed before G4.7, remove the follow-up. If not fixed by G4.7, convert the follow-up to the waiver entry below.
+- G4.7 discovery or unresolved mid-stage follow-up: record `waivers.validator_defect` in evidence-manifest.json with defect_description, affected_rule_ids[], approved_by, approved_on, follow_up_owner, follow_up_target_date (ISO date by which the defect must be fixed)
+- Mirror the waiver in pm-closeout.md under a "Validator Defects" subsection
+- DO NOT bypass via `--evidence-effective-date` (rejected for earlier-than-default; warns when in use)
+
+STOP CONDITIONS:
+- runtime preflight fails and cannot be restored
+- critical code or security finding persists after one review cycle
+- required signoff missing reviewer/date/evidence
+- canonical node edit attempted outside Architect role
+- scope drift outside {FEATURE_ID}
+- INSUFFICIENT_CONTEXT (see plan template); escalate and open raw artifacts
+- validate.py or --check-drift fails and cannot be auto-repaired
+- `validate-feature-evidence.py` at any stage exits non-zero and the cause is not addressable in this run
+- Two approved manifests detected for the same feature without supersession (two_approved_runs_without_supersession_fails)
+
+EXIT VALIDATION (run in order; all exit 0):
+- Applicable backend/frontend/test commands for changed surfaces (inside runtime containers; evidence paths recorded in commands.log)
+- `python3 agents/product-manager/scripts/validate-trackers.py --feature {FEATURE_ID} --run-id {RUN_ID}` (G4.6 internally)
+- `python3 agents/product-manager/scripts/generate-story-index.py {PRODUCT_ROOT}/planning-mds/features/` (if stories changed)
+- IF code in bound files changed: `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --regenerate-symbols`
+- IF KG changed: `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --write-coverage-report`
+- `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-symbols`
+- `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-drift`
+- `python3 agents/scripts/validate_templates.py`
+- `python3 agents/product-manager/scripts/validate-feature-evidence.py --product-root {PRODUCT_ROOT} --feature {FEATURE_ID} --stage closeout --json` → capture to {RUN_FOLDER}/artifacts/feature-evidence-validation.json for post-hoc analysis
+
+CONFLICT RESOLUTION:
+- raw artifact vs KG mapping → raw wins; repair KG in same change set
+- feature-assembly-plan vs story text → plan wins; log reconciliation via workstate.py decision --topic plan-story-reconcile
+- code vs contract/policy/KG → reconcile to contract; never silently redefine canonical semantics
+- shared-semantics change detected → halt and route to Architect
+- STATUS.md Story value not in feature's local story breakdown → fix STATUS.md; STORY-INDEX.md is cross-check only (rule status_story_value_unknown_story_fails / story_index_disagrees_with_feature_breakdown_fails)
+- manifest conditional boolean false but changed_paths contains a forced path class → set boolean true and add the required role/artifact (rule scope_boolean_false_with_changed_paths_fails)

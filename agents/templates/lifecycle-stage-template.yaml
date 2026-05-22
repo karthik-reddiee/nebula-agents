@@ -26,6 +26,7 @@ stages:
       - symbol_index_sync
       - inline_decisions_check
       - kg_orphan_check
+      - kg_coverage_gap_check
 gates:
   boundary_genericness:
     description: Prevent solution-specific leakage into generic framework agents.
@@ -59,3 +60,16 @@ gates:
       - python3
       - "{PRODUCT_ROOT}/scripts/kg/validate.py"
       - --check-orphans
+  kg_coverage_gap_check:
+    description: |
+      Warn on invocations from files outside code-index.yaml bindings that
+      target bound symbols (reads unbound-but-referenced.yaml). Default
+      severity is warn so first runs don't drown reviewers; products opt
+      into stricter enforcement by replacing --check-coverage-gaps with
+      --coverage-gaps-as-errors in this command. Baked-in exclusions cover
+      test files, migrations, scripts/, and tools/; product-specific globs
+      go through --coverage-gap-exclude.
+    command:
+      - python3
+      - "{PRODUCT_ROOT}/scripts/kg/validate.py"
+      - --check-coverage-gaps
