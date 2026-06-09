@@ -13,6 +13,7 @@ An action is a **composition recipe** that:
 - Defines which agents to invoke and in what order
 - Specifies inputs, outputs, and validation criteria
 - Can run agents sequentially, in parallel, or both
+- Selects one compact prompt context profile from `agents/context-map.yaml`
 
 ## Design Principles
 
@@ -85,7 +86,7 @@ Concrete examples of invoking this action
 ## How Actions Work
 
 ```
-User → Invokes Action → Action composes Agents → Agents execute → Validation → Output
+User → Invokes Action → Context profile selected → Action composes Agents → Agents execute → Validation → Output
 ```
 
 **Example: Plan Action**

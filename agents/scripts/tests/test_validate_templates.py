@@ -7,6 +7,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VALIDATOR = REPO_ROOT / "agents" / "scripts" / "validate_templates.py"
+PROMPTS_DIR = REPO_ROOT / "agents" / "templates" / "prompts" / "evidence-contract"
 
 
 def run_validator(plan_action: Path, feature_action: Path, templates_dir: Path) -> subprocess.CompletedProcess[str]:
@@ -43,7 +44,7 @@ def test_gate_name_drift_is_reported(tmp_path: Path) -> None:
         "feature-automation-safe.md",
         "feature-operator-friendly.md",
     ):
-        content = (REPO_ROOT / "agents/templates/prompts" / name).read_text(encoding="utf-8")
+        content = (PROMPTS_DIR / name).read_text(encoding="utf-8")
         if name == "plan-automation-safe.md":
             content = content.replace("G4 ONTOLOGY SYNC (B)", "G4 ONTOLOGY ALIGNMENT (B)", 1)
         (templates_dir / name).write_text(content, encoding="utf-8")
@@ -70,12 +71,11 @@ def test_exit_validation_drift_is_reported(tmp_path: Path) -> None:
         "feature-automation-safe.md",
         "feature-operator-friendly.md",
     ):
-        content = (REPO_ROOT / "agents/templates/prompts" / name).read_text(encoding="utf-8")
+        content = (PROMPTS_DIR / name).read_text(encoding="utf-8")
         if name == "feature-automation-safe.md":
             content = content.replace(
                 "python3 agents/product-manager/scripts/validate-trackers.py",
                 "python3 agents/product-manager/scripts/validate-trackerz.py",
-                1,
             )
         (templates_dir / name).write_text(content, encoding="utf-8")
 

@@ -15,9 +15,13 @@ Use this guide with:
 - `agents/actions/README.md`
 - `agents/docs/MANUAL-ORCHESTRATION-RUNBOOK.md`
 - `agents/agent-map.yaml`
+- `agents/context-map.yaml`
 - `CONSUMER-CONTRACT.md`
 
 `agents/agent-map.yaml` is the authoritative action-to-agent wiring source. Action `.md` files remain the human-readable execution docs.
+`agents/context-map.yaml` is the authoritative prompt-loading budget. Treat
+`agent-map.yaml` `reads` as permission boundaries, not as a default list of
+files to inject into an LLM call.
 
 ## Session Setup
 
@@ -91,6 +95,30 @@ Use a direct **agent** prompt when:
 
 ## Prompt Anatomy
 
+## Prompt Loading Strategy
+
+Use layered loading for every action or direct-agent prompt:
+
+```yaml
+load:
+  - global_core: agent-map, context-map, session setup, .agentignore rules
+  - action_core: one action doc and one matching prompt template
+  - agent_core: only the active agents/<role>/SKILL.md
+  - routing_core: agents/ROUTER.md plus KG lookup/hint output
+  - scope_context: exact product files selected by routing
+  - output_format: artifact templates for the current gate only
+on_demand:
+  - role references matched by agents/ROUTER.md
+  - examples only when explicitly requested or validator feedback requires them
+  - API/schema/code globs only after resolving them to exact files
+```
+
+This preserves behavior while preventing default prompts from carrying every
+role reference, every generic template, or whole product code trees. When an
+agent needs more context, expand from `agents/context-map.yaml` in this order:
+KG lookup or changed-path routing first, `agents/ROUTER.md` second, exact file
+loads third.
+
 Good direct-agent prompts usually include these parts:
 
 1. Explicit activation
@@ -113,6 +141,10 @@ Read:
 - <required file 1>
 - <required file 2>
 - <dependent artifacts>
+
+Prompt budget:
+- follow agents/context-map.yaml profile <role>
+- load references/examples/templates only if matched by ROUTER.md, the current gate, or validator feedback
 
 Deliverables:
 1. <deliverable 1>
@@ -194,6 +226,8 @@ Execution notes:
 Use the prompt templates in `agents/templates/prompts/` as canonical operator
 starting points for action sessions. The evidence-contract variants are the
 preferred prompts when the action must produce or review formal evidence.
+Select the template from `agents/context-map.yaml` `actions.<action>` and load
+only that one template for the current run.
 
 - `agents/templates/prompts/plan-automation-safe.md`
 - `agents/templates/prompts/plan-operator-friendly.md`

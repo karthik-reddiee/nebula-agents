@@ -8,6 +8,10 @@ the table below and load only the references matched to your current task.
 Load multiple rows when the task spans categories. Skip this router only
 when the full reference corpus is explicitly requested.
 
+This router is the reference-expansion layer for `agents/context-map.yaml`.
+It is not a default prompt payload: load it to choose references, then inject
+only the matched reference files.
+
 ## How to Use
 
 1. Identify your active agent role.

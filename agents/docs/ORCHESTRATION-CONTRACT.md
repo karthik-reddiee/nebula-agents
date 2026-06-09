@@ -36,6 +36,34 @@ It can be used with any agent runtime that can read markdown contracts and follo
 - When an action requires a role, load `agents/<role>/SKILL.md`.
 - Use role scope/boundaries exactly as specified.
 - Do not merge role responsibilities unless the action explicitly does so.
+- Use `agents/context-map.yaml` to decide which context layers are injected
+  into the role prompt. Do not treat `agent-map.yaml` `reads` globs as eager
+  prompt context.
+
+## 2.1 Prompt Context Loading
+
+Orchestrators must build prompts from the smallest sufficient layer set:
+
+1. `global_core` — session setup, action map, context map, retrieval guards.
+2. `action_core` — the selected action doc and one prompt template variant.
+3. `agent_core` — only the active role's `SKILL.md`.
+4. `routing_core` — `agents/ROUTER.md` plus KG lookup/hint/blast output.
+5. `scope_context` — exact product files selected by routing, not whole trees.
+6. `tool_rules` and `output_format` — only when the current gate needs them.
+7. `examples` — only on explicit request, unresolved ambiguity, or validator
+   feedback that requires a concrete example.
+
+Default prompt payloads must not include:
+
+- `agents/<role>/references/**` without a matching `agents/ROUTER.md` row.
+- `agents/templates/**` beyond the active prompt and current artifact template.
+- Full `{PRODUCT_ROOT}/engine/**`, `{PRODUCT_ROOT}/experience/**`, or
+  `{PRODUCT_ROOT}/neuron/**` trees.
+- Full API/schema directories when KG lookup or the assembly plan names exact
+  files.
+
+If an agent needs broader context, record why it was expanded in the run notes
+or evidence log, then load exact files where possible.
 
 ## 3. Intent Routing
 

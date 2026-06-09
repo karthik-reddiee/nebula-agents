@@ -1,0 +1,197 @@
+# Prompt Context Map
+#
+# Purpose: define what an orchestrator should actually inject into an LLM
+# prompt. Keep this separate from agents/agent-map.yaml reads/writes: the map
+# there is a permission boundary, while this file is the retrieval budget.
+version: 1
+
+strategy:
+  default: layered_minimum
+  rule: load only required layers; resolve globs to exact files before prompt injection
+  fallback: if a task is underspecified, ask for scope or run KG lookup before loading broad trees
+
+layers:
+  global_core:
+    description: Session rules shared by every action.
+    load:
+      - agents/agent-map.yaml
+      - agents/context-map.yaml
+      - agents/docs/AGENT-USE.md#Session Setup
+      - agents/docs/AGENTIGNORE.md
+  action_core:
+    description: One action doc plus one matching prompt template.
+    load:
+      - agents/actions/{action}.md
+      - agents/templates/prompts/evidence-contract/{action}-{mode}.md
+  agent_core:
+    description: Role contract for the active agent only.
+    load:
+      - agents/{role}/SKILL.md
+  routing_core:
+    description: Small routing helpers before optional context.
+    load:
+      - agents/ROUTER.md
+      - "{PRODUCT_ROOT}/scripts/kg/lookup.py output for target feature/action scope"
+  scope_context:
+    description: Product files selected by KG lookup, assembly plan, changed paths, or explicit user scope.
+    load_exact:
+      - "{PRODUCT_ROOT}/planning-mds/BLUEPRINT.md"
+      - "{FEATURE_PATH}/feature-assembly-plan.md when present or being authored"
+      - "{FEATURE_PATH}/PRD.md and story files for the target feature only"
+      - "{PRODUCT_ROOT}/planning-mds/knowledge-graph/*.yaml entries referenced by lookup output"
+  tool_rules:
+    description: Tool-specific commands and validation gates for the current action.
+    load_exact:
+      - agents/docs/KNOWLEDGE-GRAPH.md only for KG tool details not present in ROUTER.md
+      - agents/docs/AGENT-OPS.md only for evidence/package details not present in the prompt template
+  output_format:
+    description: Only templates needed for artifacts being written in the current gate.
+    load_exact:
+      - agents/templates/{artifact-template}.md
+      - agents/templates/{artifact-template}.yaml
+      - agents/templates/{artifact-template}.json
+      - agents/templates/{artifact-template}.yml
+  examples:
+    description: Examples are never default context.
+    load_when:
+      - user explicitly asks for examples
+      - current artifact cannot be shaped from its template
+      - a validator failure asks for a concrete canonical example
+
+profiles:
+  product-manager:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target feature folder only
+      - feature registry, roadmap, tracker governance when tracker/status changes
+      - KG feature-mappings entries for target feature/story/persona
+    on_demand:
+      - agents/templates/*feature*template.md
+      - agents/templates/*story*template.md
+      - agents/product-manager/references/* matched by agents/ROUTER.md
+
+  architect:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target feature folder only
+      - architecture decisions linked by KG lookup or assembly plan
+      - exact API/schema/security files linked by the target plan
+    on_demand:
+      - agents/templates/feature-assembly-plan-template.md
+      - agents/templates/adr-template.md
+      - agents/templates/api-contract-template.yaml
+      - agents/architect/references/* matched by agents/ROUTER.md
+
+  backend-developer:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target feature assembly plan and stories
+      - exact API/schema files named by the assembly plan or KG lookup
+      - changed backend files and direct dependencies from hint.py
+    on_demand:
+      - agents/backend-developer/references/* matched by agents/ROUTER.md
+
+  frontend-developer:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target feature assembly plan, stories, and screen specs
+      - exact API/schema files named by the assembly plan or KG lookup
+      - changed frontend files and direct dependencies from hint.py
+      - agents/frontend-developer/references/ux-audit-ruleset.md for UI changes
+    on_demand:
+      - agents/frontend-developer/references/* matched by agents/ROUTER.md
+
+  ai-engineer:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target AI/LLM/MCP requirements only
+      - neuron files and prompt/workflow files returned by hint.py
+    on_demand:
+      - agents/ai-engineer/references/* matched by agents/ROUTER.md
+      - agents/architect/references/ai-*.md when architecture choices are unresolved and matched by agents/ROUTER.md
+
+  quality-engineer:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - target stories and acceptance criteria
+      - changed code paths and existing tests from hint.py
+      - coverage/test artifacts required by the current gate
+    on_demand:
+      - agents/quality-engineer/references/* matched by agents/ROUTER.md
+
+  devops:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - deployment-impacting changed files only
+      - exact compose, Dockerfile, workflow, env, and script files in scope
+      - deployment architecture template only when writing deployment docs
+    on_demand:
+      - agents/devops/references/* matched by agents/ROUTER.md
+
+  code-reviewer:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - changed files under review
+      - target feature acceptance criteria and assembly plan
+      - exact standards/templates needed to score findings
+    on_demand:
+      - agents/code-reviewer/references/* matched by agents/ROUTER.md
+      - agents/frontend-developer/references/ux-audit-ruleset.md for UI changes matched by agents/ROUTER.md
+
+  security:
+    always: [global_core, action_core, agent_core, routing_core]
+    scope:
+      - auth/security-sensitive changed files only
+      - target threat model, authorization matrix, and policy files when linked
+    on_demand:
+      - agents/security/references/* matched by agents/ROUTER.md
+
+  technical-writer:
+    always: [global_core, action_core, agent_core]
+    scope:
+      - implemented files and public contracts being documented
+      - existing target docs to preserve style and links
+    on_demand:
+      - agents/technical-writer/references/* when writing quality is the blocker and matched by agents/ROUTER.md
+
+  blogger:
+    always: [global_core, action_core, agent_core]
+    scope:
+      - completed work, ADRs, evidence summaries, and release notes for the topic
+    on_demand:
+      - agents/blogger/references/* when shaping long-form content and matched by agents/ROUTER.md
+
+actions:
+  init:
+    prompt_template: agents/templates/prompts/evidence-contract/init-{mode}.md
+    default_mode: operator-friendly
+  plan:
+    prompt_template: agents/templates/prompts/evidence-contract/plan-{mode}.md
+    default_mode: automation-safe
+  plan-review:
+    prompt_template: agents/templates/prompts/evidence-contract/plan-review-{mode}.md
+    default_mode: automation-safe
+  build:
+    prompt_template: agents/templates/prompts/evidence-contract/build-{mode}.md
+    default_mode: automation-safe
+  feature:
+    prompt_template: agents/templates/prompts/evidence-contract/feature-{mode}.md
+    default_mode: automation-safe
+  feature-review:
+    prompt_template: agents/templates/prompts/evidence-contract/feature-review-{mode}.md
+    default_mode: automation-safe
+  review:
+    prompt_template: agents/templates/prompts/evidence-contract/review-{mode}.md
+    default_mode: automation-safe
+  validate:
+    prompt_template: agents/templates/prompts/evidence-contract/validate-{mode}.md
+    default_mode: automation-safe
+  test:
+    prompt_template: agents/templates/prompts/evidence-contract/test-{mode}.md
+    default_mode: automation-safe
+  document:
+    prompt_template: agents/templates/prompts/evidence-contract/document-{mode}.md
+    default_mode: automation-safe
+  blog:
+    prompt_template: agents/templates/prompts/evidence-contract/blog-{mode}.md
+    default_mode: operator-friendly

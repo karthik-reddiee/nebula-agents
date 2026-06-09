@@ -1,11 +1,25 @@
 # ──────────────────────────────────────────────────────────────
 # Agent Map — Structural wiring for the Agent-Driven Builder Framework
 # ──────────────────────────────────────────────────────────────
-# This file is the AUTHORITATIVE source for action→agent wiring.
-# Action .md files remain human-readable documentation;
-# orchestrators and LLMs resolve execution plans from this map.
+# This file is the AUTHORITATIVE source for action→agent wiring and
+# permission boundaries. Prompt injection uses agents/context-map.yaml:
+# load only that profile's layered context, then resolve reads globs on demand.
+# Action .md files remain human-readable documentation.
 # ──────────────────────────────────────────────────────────────
 version: 1
+
+context_loading:
+  map: agents/context-map.yaml
+  default_strategy: layered_minimum
+  # `reads` below are capability boundaries, not prompt payloads. Orchestrators
+  # must start from context-map profiles and only expand read globs when KG
+  # lookup, agent router rows, changed files, or the current gate require them.
+  rules:
+    - load global_core, action_core, and active agent_core first
+    - run routing/KG lookup before broad product discovery
+    - load templates only for artifacts being written in the current gate
+    - load examples and role references only through agents/ROUTER.md matches
+    - resolve product code and schema globs to exact files before injection
 
 # ═══════════════════════════════════════════════════════════════
 # AGENTS — global declarations (role, skill file, read/write boundaries)
@@ -24,6 +38,8 @@ version: 1
 agents:
   product-manager:
     skill: agents/product-manager/SKILL.md
+    prompt_context:
+      profile: product-manager
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/domain/**
@@ -38,6 +54,8 @@ agents:
 
   architect:
     skill: agents/architect/SKILL.md
+    prompt_context:
+      profile: architect
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/features/**
@@ -63,6 +81,8 @@ agents:
 
   backend-developer:
     skill: agents/backend-developer/SKILL.md
+    prompt_context:
+      profile: backend-developer
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/SOLUTION-PATTERNS.md
@@ -77,6 +97,8 @@ agents:
 
   frontend-developer:
     skill: agents/frontend-developer/SKILL.md
+    prompt_context:
+      profile: frontend-developer
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/SOLUTION-PATTERNS.md
@@ -92,6 +114,8 @@ agents:
 
   ai-engineer:
     skill: agents/ai-engineer/SKILL.md
+    prompt_context:
+      profile: ai-engineer
     condition: scope includes AI, LLM, MCP, or {PRODUCT_ROOT}/neuron/
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
@@ -106,6 +130,8 @@ agents:
 
   quality-engineer:
     skill: agents/quality-engineer/SKILL.md
+    prompt_context:
+      profile: quality-engineer
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/SOLUTION-PATTERNS.md
@@ -123,6 +149,8 @@ agents:
 
   devops:
     skill: agents/devops/SKILL.md
+    prompt_context:
+      profile: devops
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/**
@@ -143,6 +171,8 @@ agents:
 
   code-reviewer:
     skill: agents/code-reviewer/SKILL.md
+    prompt_context:
+      profile: code-reviewer
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/SOLUTION-PATTERNS.md
@@ -157,6 +187,8 @@ agents:
 
   security:
     skill: agents/security/SKILL.md
+    prompt_context:
+      profile: security
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/SOLUTION-PATTERNS.md
@@ -172,6 +204,8 @@ agents:
 
   technical-writer:
     skill: agents/technical-writer/SKILL.md
+    prompt_context:
+      profile: technical-writer
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/**
@@ -184,6 +218,8 @@ agents:
 
   blogger:
     skill: agents/blogger/SKILL.md
+    prompt_context:
+      profile: blogger
     reads:
       - {PRODUCT_ROOT}/planning-mds/BLUEPRINT.md
       - {PRODUCT_ROOT}/planning-mds/architecture/decisions/**
@@ -229,7 +265,7 @@ actions:
   plan:
     doc: agents/actions/plan.md
     description: Complete planning — requirements (Phase A) + architecture (Phase B) + ontology synchronization
-    prerequisites: [{PRODUCT_ROOT}/planning-mds/BLUEPRINT.md exists with Sections 0-2]
+    prerequisites: ["{PRODUCT_ROOT}/planning-mds/BLUEPRINT.md exists with Sections 0-2"]
     steps:
       - agent: product-manager
         phase: A
@@ -349,7 +385,7 @@ actions:
   validate:
     doc: agents/actions/validate.md
     description: Requirements + architecture alignment check (read-only)
-    prerequisites: [{PRODUCT_ROOT}/planning-mds/BLUEPRINT.md exists]
+    prerequisites: ["{PRODUCT_ROOT}/planning-mds/BLUEPRINT.md exists"]
     steps:
       - parallel:
           - product-manager
@@ -423,4 +459,4 @@ lifecycle:
   gates:
     - boundary_genericness: agents/scripts/validate-genericness.py
     - skill_regression: agents/scripts/run-skill-regression.py
-    - knowledge_graph_sync: {PRODUCT_ROOT}/scripts/kg/validate.py
+    - knowledge_graph_sync: "{PRODUCT_ROOT}/scripts/kg/validate.py"
