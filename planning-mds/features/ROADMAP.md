@@ -1,6 +1,6 @@
 # Feature Roadmap (Now / Next / Later)
 
-**Last Reviewed:** 2026-06-18
+**Last Reviewed:** 2026-06-24
 
 ## Purpose
 
@@ -22,12 +22,14 @@ This roadmap sequences Nebula Agents work so the team can validate one delivery 
 
 | Feature | Status | Why Next | Entry Criteria |
 |---------|--------|----------|----------------|
-| [F0002 - Managed Agent Orchestration](./F0002-managed-agent-orchestration/) | Planned | Add provider adapters and richer orchestration once tmux behavior is understood and testable. | F0001 is implemented, reviewed, and has evidence that native interactivity can be preserved or matched. |
+| [F0003 - Local Agent Runtime Control Plane](./F0003-local-agent-runtime-control-plane/) | Planned | Add concrete local commands, status tools, evidence retrieval, summaries, metrics, and reviewed learning before managed orchestration becomes default. | F0001 session registry and transcript model are accepted or available as implementation dependencies. |
+| [F0002 - Managed Agent Orchestration](./F0002-managed-agent-orchestration/) | Planned | Add provider adapters and richer orchestration once tmux behavior and runtime control-plane contracts are understood and testable. | F0001 is implemented, F0003 runtime contracts are validated, and evidence shows native interactivity can be preserved or matched. |
 
 ## Later
 
 | Feature | Status | Notes |
 |---------|--------|-------|
+| [F0004 - Reflective Learning Loop and Strategy Playbook](./F0004-reflective-learning-loop/) | Planned | Closes the context-engineering loop (learn -> Write -> Select). Needs run evidence/telemetry from F0003 evidence store before reflection has useful input. Ships behind a default-off flag, candidate-only at first. |
 
 ## Completed
 
@@ -37,4 +39,6 @@ This roadmap sequences Nebula Agents work so the team can validate one delivery 
 ## Notes
 
 - F0001 is a subscription-first implementation path. It should call authenticated local CLIs, not API-key-only SDK flows.
+- F0003 is the local runtime hardening layer that turns launch, status, evidence, summaries, metrics, and learning review into concrete implementation contracts.
 - F0002 may support SDK and exec-based providers, but it must keep a tmux fallback until managed orchestration proves equivalent engineering quality.
+- F0004 is a context-engineering layer, not a runtime path. It depends on F0003 evidence/telemetry being available to reflect from, and it never mutates `SKILL.md` or applies an unapproved change.

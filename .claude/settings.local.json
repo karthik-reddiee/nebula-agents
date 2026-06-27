@@ -306,7 +306,17 @@
       "Bash(echo \"VS_F37=$?\")",
       "Bash(echo \"VT=$?\")",
       "Bash(:)",
-      "Bash(grep -nE '^#{1,3} ' planning-mds/architecture/data-model.md)"
+      "Bash(grep -nE '^#{1,3} ' planning-mds/architecture/data-model.md)",
+      "Bash(gh api *)",
+      "Bash(git --no-pager diff --stat)",
+      "Bash(git --no-pager diff -w agents/architect/SKILL.md)",
+      "Bash(git --no-pager diff --stat agents/architect/SKILL.md)",
+      "Bash(git --no-pager diff agents/scripts/run-skill-regression.py)",
+      "Bash(git --no-pager show --stat HEAD)",
+      "Bash(git --no-pager log -8 --format='%an <%ae>')",
+      "Bash(git config *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

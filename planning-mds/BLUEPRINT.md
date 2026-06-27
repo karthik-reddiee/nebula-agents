@@ -27,6 +27,14 @@ Nebula Agents should become an operator cockpit for high-quality agentic deliver
   - [F0002-S0004 - Streaming event and approval bridge](features/F0002-managed-agent-orchestration/F0002-S0004-streaming-event-and-approval-bridge.md) - Not Started
   - [F0002-S0005 - Migration from tmux to managed orchestration](features/F0002-managed-agent-orchestration/F0002-S0005-migration-from-tmux-to-managed-orchestration.md) - Not Started
 
+- [F0004 - Reflective Learning Loop and Strategy Playbook](features/F0004-reflective-learning-loop/README.md) - Planned / Later
+  - [F0004-S0001 - Strategy playbook artifact and entry schema](features/F0004-reflective-learning-loop/F0004-S0001-strategy-playbook-artifact-and-schema.md) - Not Started
+  - [F0004-S0002 - Reflector role and trace analysis](features/F0004-reflective-learning-loop/F0004-S0002-reflector-role-and-trace-analysis.md) - Not Started
+  - [F0004-S0003 - Reflect action and approval-gated curation](features/F0004-reflective-learning-loop/F0004-S0003-reflect-action-and-approval-gate.md) - Not Started
+  - [F0004-S0004 - Curation lifecycle, counters, and supersession](features/F0004-reflective-learning-loop/F0004-S0004-curation-lifecycle-and-decay.md) - Not Started
+  - [F0004-S0005 - Strategy selection and context load-back](features/F0004-reflective-learning-loop/F0004-S0005-strategy-selection-and-load-back.md) - Not Started
+  - [F0004-S0006 - Boundary, genericness, and lifecycle-gate enforcement](features/F0004-reflective-learning-loop/F0004-S0006-boundary-and-genericness-gate.md) - Not Started
+
 ## Validation Policy
 
 - Product planning updates must keep `features/REGISTRY.md`, `features/ROADMAP.md`, `features/STORY-INDEX.md`, and this blueprint synchronized.
