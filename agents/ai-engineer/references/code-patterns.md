@@ -123,7 +123,10 @@ When implementing AI features using **AI-Embedded (Pattern 2)** or **AI-Centric 
 1. **Define API Endpoints** - RESTful endpoints for AI features
 2. **Document Request/Response Schemas** - OpenAPI specs in `{PRODUCT_ROOT}/planning-mds/api/neuron-api.yaml`
 3. **Implement Data Fetching** - Call {PRODUCT_ROOT}/engine/ internal APIs to get CRM data
-4. **Handle Service Auth** - Use service tokens to authenticate with backend
+4. **Handle Auth Mode** - Use the architecture-approved auth mode. For
+   user-scoped companion/chat actions, forward the user's token so backend
+   authorization remains authoritative. Use service identity only for
+   machine-owned jobs or explicitly approved service operations.
 5. **Return Structured Responses** - Include metadata (model, tokens, cost, latency)
 6. **Implement Error Handling** - Graceful failures with error codes
 
@@ -164,21 +167,22 @@ Response (Error):
 
 **Data Access Pattern:**
 
-Neuron/ calls backend internal APIs to fetch CRM data:
+Neuron calls backend APIs to fetch CRM data. For user-scoped companion
+interactions, prefer forwarded user tokens so the backend enforces its normal
+RBAC/ABAC policy:
 
 ```python
 # {PRODUCT_ROOT}/neuron/services/data_service.py
 import httpx
-import os
 
 class DataService:
-    def __init__(self):
+    def __init__(self, user_access_token: str):
         self.base_url = "http://engine:5000/api/internal"
-        self.service_token = os.getenv("NEURON_SERVICE_TOKEN")
+        self.user_access_token = user_access_token
 
     async def fetch_customer_data(self, customer_id: str) -> dict:
-        """Fetch customer data from backend internal API."""
-        headers = {"Authorization": f"Bearer {self.service_token}"}
+        """Fetch customer data using the caller's backend authorization scope."""
+        headers = {"Authorization": f"Bearer {self.user_access_token}"}
 
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -188,13 +192,144 @@ class DataService:
             )
 
             if response.status_code == 401:
-                raise AuthenticationError("Service token invalid")
+                raise AuthenticationError("User token invalid or expired")
+            if response.status_code == 403:
+                raise AuthorizationError("User is not authorized for this resource")
             if response.status_code == 404:
                 raise NotFoundError(f"Customer {customer_id} not found")
 
             response.raise_for_status()
             return response.json()
 ```
+
+Use a service token only when the architecture says the operation is
+machine-owned rather than acting on behalf of a user:
+
+```python
+class ServiceDataService:
+    def __init__(self, service_token: str):
+        self.base_url = "http://engine:5000/api/internal"
+        self.service_token = service_token
+
+    async def emit_agent_metric(self, payload: dict) -> None:
+        headers = {"Authorization": f"Bearer {self.service_token}"}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/agent-metrics",
+                json=payload,
+                headers=headers,
+                timeout=5.0,
+            )
+            response.raise_for_status()
+```
+
+## Stateless Runtime & Provenance
+
+Neuron should remain a stateless intelligence layer unless an ADR says
+otherwise. Persist durable conversation and agent-operation data through backend
+contracts, including:
+
+- threads and messages
+- message parts / component payloads
+- agent runs and tool calls
+- prompt versions
+- provenance such as model, prompt id/version, input digest, output/content
+  hash, latency, token counts, cost, and trace id
+
+Return enough metadata for audit and replay, but do not log full prompts,
+responses, or customer PII.
+
+## Versioned YAML Orchestration
+
+When a feature needs deterministic, evolvable orchestration, prefer simple
+versioned YAML definitions validated by tests before adding a heavy agent
+framework.
+
+```yaml
+id: renewal_day_at_a_glance
+version: v1.0.0
+matching:
+  intent: day_at_a_glance
+nodes:
+  - id: entry
+    kind: Entry
+  - id: classify_scope
+    kind: Tool
+    tool:
+      name: classifier.crm_scope
+      input_template:
+        message: "{{ message }}"
+      output_contract:
+        type: object
+  - id: success
+    kind: Terminal
+    terminal_state: success
+edges:
+  - from: entry
+    to: classify_scope
+  - from: classify_scope
+    to: success
+```
+
+Test expectations:
+- YAML parses and validates against a checked-in schema
+- plan ids and versions are unique
+- every referenced tool/head has a registered handler
+- terminal states and fallback paths are explicit
+- execution traces include plan id/version, node ids, tool names, status, and
+  sanitized error metadata
+
+## A2A-Aligned Agent Delegation
+
+When an ADR selects A2A for a product's Neuron architecture, implement the
+approved A2A profile as the agent-delegation contract. Use MCP separately for
+tools/resources.
+
+Recommended implementation shape:
+
+- Agent Card / capability manifests are versioned, code-reviewed assets.
+- The top-level orchestrator, specialist heads, and goal agents are registered
+  as agents/capabilities.
+- Workflow YAML references agents by stable ids, not by Python import paths.
+- A2A `contextId` maps to the product thread/conversation id.
+- A2A task ids map to persisted agent-run ids.
+- Child tasks preserve parent/child run relationships for traceability.
+- A2A messages/parts/artifacts map to the product's versioned response
+  envelope and component registry.
+- Public/external A2A exposure is disabled unless the feature or ADR explicitly
+  includes it.
+
+Example private capability manifest:
+
+```yaml
+id: domain.customer.head
+version: v1.0.0
+name: Customer Specialist Head
+visibility: private
+description: Handles customer overview reads and follow-up draft actions.
+accepted_input_modes:
+  - text/plain
+  - application/json
+accepted_output_modes:
+  - application/vnd.nebula.message-envelope+json
+capabilities:
+  - customer.attention_list
+  - customer.follow_up_draft
+delegates_to:
+  - domain.customer.follow_up_drafter
+tools:
+  - engine.customer.list_attention
+  - engine.customer.persist_draft
+  - engine.customer.mock_send
+```
+
+Trace/persistence expectations:
+- Persist task id, parent task id, context/thread id, agent id/version, plan
+  id/version, status, start/end timestamps, sanitized error metadata, and trace id.
+- Persist prompt id/version, model, token counts, cost, latency, content hash,
+  and output validation result.
+- Never persist raw prompts, raw model responses, or customer PII in operational
+  logs unless a product ADR explicitly allows it.
 
 ### Frontend-Neuron Integration (AI-Centric Only)
 
@@ -586,7 +721,10 @@ async def assess_risk(request: RiskAssessmentRequest):
 
 ## Example Agent Implementation
 
-`{PRODUCT_ROOT}/neuron/domain_agents/` is the target location for agent implementations. Populate with:
+`{PRODUCT_ROOT}/neuron/domain_agents/` is the generic default location for
+agent implementations. If the architecture specifies a product-specific package
+such as `{PRODUCT_ROOT}/neuron/crm_agents/`, use that import-safe package
+instead. Populate agent packages with:
 - Agent definition
 - Prompt templates
 - Tool implementations
@@ -597,7 +735,8 @@ async def assess_risk(request: RiskAssessmentRequest):
 - [ ] API endpoint defined in FastAPI
 - [ ] Request/response schemas documented
 - [ ] Data fetching from backend implemented
-- [ ] Service-to-service auth configured
+- [ ] Architecture-approved auth mode configured
+- [ ] User-token forwarding configured for user-scoped companion/chat actions
 - [ ] Error handling with fallbacks
 - [ ] Logging all requests with metadata
 - [ ] Metrics tracking (latency, cost, errors)
@@ -605,6 +744,7 @@ async def assess_risk(request: RiskAssessmentRequest):
 - [ ] Rate limiting implemented
 - [ ] PII sanitization before LLM calls
 - [ ] Output validation and sanitization
+- [ ] Prompt versions and provenance recorded
 - [ ] Unit tests for agent logic
 - [ ] Integration tests with mock backend
 - [ ] Evaluation tests for accuracy

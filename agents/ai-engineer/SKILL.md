@@ -4,10 +4,10 @@ description: "Builds the AI intelligence layer including LLM integrations, agent
 compatibility: ["manual-orchestration-contract"]
 metadata:
   allowed-tools: "Read Write Edit Bash(python:*) Bash(pip:*) Bash(pytest:*)"
-  version: "2.1.0"
+  version: "3.0.0"
   author: "Nebula Framework Team"
   tags: ["ai", "llm", "mcp", "implementation"]
-  last_updated: "2026-02-14"
+  last_updated: "2026-06-30"
 ---
 
 # AI Engineer Agent
@@ -54,7 +54,9 @@ Your responsibility is to build the **intelligence layer** ({PRODUCT_ROOT}/neuro
 | Input/output sanitization | **Low** | Always validate inputs before LLM calls and sanitize outputs. No exceptions. |
 | Prompt engineering | **High** | Use judgment on prompt structure, few-shot examples, and system instructions. Iterate based on results. |
 | Model selection and routing | **High** | Choose model tier based on task complexity, latency, and cost constraints. |
-| Agent architecture | **High** | Choose between single-prompt, ReAct, multi-agent based on requirements. |
+| Agent architecture | **High** | Choose between single-prompt, ReAct, multi-agent, or deterministic workflow plans based on requirements. |
+| Orchestration framework choice | **Medium** | Default to simple versioned YAML orchestration with schema validation for product workflows. Add heavier agent frameworks only when an ADR or story requires them. |
+| Agent delegation protocol | **Medium** | Use typed internal delegation by default. When an ADR selects A2A, implement the approved A2A profile, task lifecycle, capability registry, and exposure boundary. |
 | Code organization within {PRODUCT_ROOT}/neuron/ | **Medium** | Follow directory structure but adapt module granularity to feature complexity. |
 | Caching and optimization strategy | **Medium** | Apply caching where beneficial. Choose strategy based on access patterns. |
 
@@ -89,8 +91,12 @@ Your responsibility is to build the **intelligence layer** ({PRODUCT_ROOT}/neuro
 - Design agent architectures
 - Build multi-step workflows
 - Implement agent tools and capabilities
-- Create agent-to-agent communication
+- Create typed agent-to-agent delegation within the Neuron runtime; when an ADR
+  selects A2A, implement the approved A2A profile rather than ad hoc calls
 - Handle workflow state management
+- Implement versioned workflow/head definitions as code-reviewed assets
+  (for example YAML plans) when the architecture calls for deterministic,
+  evolvable orchestration
 
 ### 3. MCP Server Implementation
 - Implement MCP protocol servers (FastAPI)
@@ -119,6 +125,31 @@ Your responsibility is to build the **intelligence layer** ({PRODUCT_ROOT}/neuro
 - Implement caching strategies
 - Use appropriate model tiers
 - Monitor and alert on costs
+
+### 7. Stateless Neuron Runtime
+- Keep `{PRODUCT_ROOT}/neuron/` as an intelligence/runtime layer, not a source
+  of truth for product/business data
+- Statelessness is about the *service* (no in-process session state; restart-safe,
+  horizontally scalable) — it does **not** dictate where durable agent-operation
+  state lives. Owning a durable store does not make the service stateful.
+- Persist durable agent-operation state (threads, messages, agent runs, tool
+  calls, provenance, prompt/card version references) to the store the feature's
+  persistence ADR designates. That may be the AI service's **own** operation
+  schema (it owns its migrations + persistence API and writes it directly) or a
+  backend-owned store — the ADR decides; do **not** assume a backend pass-through.
+- Implement a clear persistence interface so the storage owner can change without
+  reshaping callers; CRM/business writes still go through the backend as the user
+- Return replayable, versioned responses so persisted conversations can render
+  after the response schema evolves
+
+### 8. Message, Component, and Action Contracts
+- Own the Neuron side of the versioned message envelope for AI responses
+- Return registered component identifiers and validated props; never emit UI
+  markup for the frontend to execute
+- Define action payloads as structured contracts that the frontend can send
+  back to Neuron or backend endpoints
+- Validate all model-generated component names, props, and action arguments
+  against allowlists and schemas before returning them
 
 ## Retrieval Guard
 
@@ -156,6 +187,7 @@ same edge set with no neighborhood/sibling context.
 - LLM Provider SDKs (cloud or self-hosted)
 - FastAPI (MCP servers)
 - LangChain / LlamaIndex (optional frameworks)
+- YAML/JSON Schema for versioned workflow definitions when applicable
 - pytest (testing)
 
 ## Neuron Directory Structure
@@ -163,13 +195,18 @@ same edge set with no neighborhood/sibling context.
 ```
 {PRODUCT_ROOT}/neuron/
 ├── mcp/              # MCP servers
-├── domain_agents/    # Domain agent implementations
+├── domain_agents/    # Default location for domain agent implementations
 ├── models/           # Model integrations
 ├── workflows/        # Agentic workflows
 ├── prompts/          # Prompt templates
 ├── tools/            # Agent tools
 └── config/           # Configuration
 ```
+
+Use `domain_agents/` as the generic default. If the product architecture
+chooses a solution-specific package name such as `crm_agents/`, follow that
+assembly-plan convention and keep it import-safe (no hyphenated Python package
+names).
 
 ## Input Contract
 
@@ -184,6 +221,14 @@ same edge set with no neighborhood/sibling context.
 - Data access requirements
 - Model selection criteria
 - Performance requirements
+- Auth mode for backend calls (forwarded user token, service identity, or other
+  ADR-approved mode)
+- Persistence ownership for threads, messages, agent runs, tool calls, prompt
+  versions, and provenance
+- Versioned message envelope, component registry, and action callback contracts
+- Agent-delegation protocol choice, including A2A Agent Card/capability
+  manifest, task lifecycle, message/artifact mapping, and public/private
+  exposure boundary when applicable
 
 ### Prerequisites
 - [ ] AI feature requirements defined in user stories
@@ -206,6 +251,7 @@ same edge set with no neighborhood/sibling context.
 - MCP server implementation
 - Agent workflow definitions
 - Prompt templates
+- Versioned workflow/head definitions and validation schemas when applicable
 - `# WHY:` markers for non-obvious choices (workarounds, performance trade-offs, contract-shaped logic); skip self-explanatory code
 
 **Configuration:**
@@ -217,12 +263,16 @@ same edge set with no neighborhood/sibling context.
 - `{PRODUCT_ROOT}/neuron/README.md` updates
 - Agent behavior documentation
 - Prompt documentation
+- Prompt version and provenance documentation
+- Message/component/action contract documentation for frontend/backend consumers
 - API documentation for MCP servers
 
 **Tests:**
 - Unit tests for agent logic
 - Integration tests for MCP servers
 - Evaluation tests for agent performance
+- Contract tests for workflow definitions, registered tools/heads, message
+  envelopes, component props, action payloads, and provenance metadata
 
 ## Definition of Done
 
@@ -231,10 +281,14 @@ same edge set with no neighborhood/sibling context.
 - [ ] Prompts crafted and tested
 - [ ] Agent tools implemented
 - [ ] MCP server running (if applicable)
+- [ ] Workflow/head definitions are versioned and validated (if applicable)
+- [ ] Every workflow-referenced tool/head has a registered handler
+- [ ] Message envelope, component props, and action payloads are schema-validated
 - [ ] Unit tests passing
 - [ ] Integration tests passing
 - [ ] Performance acceptable (latency, accuracy)
 - [ ] Cost tracking implemented
+- [ ] Prompt versions and provenance metadata implemented
 - [ ] Documentation complete
 - [ ] No hardcoded API keys (use env vars)
 - [ ] Error handling comprehensive
@@ -264,8 +318,9 @@ same edge set with no neighborhood/sibling context.
 1. Run `pytest {PRODUCT_ROOT}/neuron/tests/`
 2. If tests fail → read failure output, fix issue, retest
 3. Test with sample inputs and evaluate accuracy
-4. If accuracy below threshold → refine prompts, retest
-5. Only proceed to integration when tests pass and accuracy is acceptable
+4. If workflow definitions are used → validate schemas and handler registry
+5. If accuracy below threshold → refine prompts, retest
+6. Only proceed to integration when tests pass and accuracy is acceptable
 
 ### 5. Integrate
 - Connect to main application
@@ -322,9 +377,27 @@ When implementing AI features, define clear contracts between {PRODUCT_ROOT}/neu
 1. **Define API Endpoints** — RESTful endpoints for AI features
 2. **Document Request/Response Schemas** — OpenAPI specs in `{PRODUCT_ROOT}/planning-mds/api/neuron-api.yaml`
 3. **Implement Data Fetching** — Call {PRODUCT_ROOT}/engine/ internal APIs to get CRM data
-4. **Handle Service Auth** — Use service tokens to authenticate with backend
+4. **Handle Auth Mode** — Use the architecture-approved mode. For user-scoped
+   companion/chat actions, forward the user's token to the backend so backend
+   authorization remains authoritative. Use service identity only for
+   machine-owned jobs or explicitly approved service operations.
 5. **Return Structured Responses** — Include metadata (model, tokens, cost, latency)
 6. **Implement Error Handling** — Graceful failures with error codes
+7. **Stateless Service, ADR-Owned Store** — Keep the service stateless (no
+   in-process session state). Durable threads, messages, agent runs, tool calls,
+   provenance, and prompt/card version references are persisted to the store the
+   feature's persistence ADR designates — the AI service's own operation schema or
+   a backend store. Owning a store does not make the service stateful.
+
+### Agent Delegation and A2A
+
+For multi-agent Neuron features, implement agent delegation through typed
+interfaces, registries, versioned workflow definitions, and execution traces.
+If the architecture selects A2A, map internal agents to the approved A2A profile:
+private or public Agent Cards, task ids, context ids, messages, parts, artifacts,
+status transitions, and cancellation/error semantics. Keep MCP/tool calls
+separate: A2A delegates work between agents; MCP exposes tools and resources to
+agents.
 
 For API contract templates, data access patterns, WebSocket streaming, and MCP server examples, see `agents/ai-engineer/references/code-patterns.md` — Sections: Integration Contracts, Observability Requirements.
 
@@ -342,6 +415,11 @@ For real-time streaming:
 2. **Define Tool Schemas** — Input/output schemas for each tool
 3. **Handle Tool Authorization** — Verify scoped permissions
 4. **Document MCP Server** — OpenAPI-style spec in `{PRODUCT_ROOT}/planning-mds/api/mcp-servers.yaml`
+
+For component-based in-app AI experiences, use MCP/tool architecture for Neuron
+capabilities while returning registered component identifiers and props to the
+host application. Do not implement external-host MCP UI or sandboxed resource
+surfaces unless the feature explicitly includes them.
 
 ## Observability Requirements
 
@@ -387,6 +465,7 @@ Generic AI engineering best practices:
 - [ ] Request/response schemas documented
 - [ ] Data fetching from backend implemented
 - [ ] Service-to-service auth configured
+- [ ] User-scoped auth forwarding configured when required by architecture
 - [ ] Error handling with fallbacks
 - [ ] Logging all requests with metadata
 - [ ] Metrics tracking (latency, cost, errors)
@@ -394,6 +473,7 @@ Generic AI engineering best practices:
 - [ ] Rate limiting implemented
 - [ ] PII sanitization before LLM calls
 - [ ] Output validation and sanitization
+- [ ] Prompt versions and provenance recorded
 - [ ] Unit tests for agent logic
 - [ ] Integration tests with mock backend
 - [ ] Evaluation tests for accuracy

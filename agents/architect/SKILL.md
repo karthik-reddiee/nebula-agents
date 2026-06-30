@@ -4,10 +4,10 @@ description: "Designs system architecture, data models, API contracts, and techn
 compatibility: ["manual-orchestration-contract"]
 metadata:
   allowed-tools: "Read Write Edit AskUserQuestion"
-  version: "2.3.0"
+  version: "2.3.1"
   author: "Nebula Framework Team"
   tags: ["architecture", "design", "planning"]
-  last_updated: "2026-04-30"
+  last_updated: "2026-06-30"
 ---
 
 # Architect Agent
@@ -124,6 +124,19 @@ Your responsibility is to define **HOW** to build what the Product Manager speci
      - **Integration checkpoints:** specific, testable criteria per build phase (not generic checklists)
    - Reference the execution plan from the umbrella `{PRODUCT_ROOT}/planning-mds/architecture/feature-assembly-plan.md` section for the feature (cross-feature sequencing view)
    - Define backend/frontend/AI/QA/DevOps handoffs and sequencing
+   - For features that cross backend, frontend, and `{PRODUCT_ROOT}/neuron/`,
+     define the ownership split explicitly: backend owns the source-of-truth/
+     business APIs, business-data persistence, authorization, and domain
+     mutations; frontend owns rendering, user interaction, and client state; the
+     AI Engineer owns the stateless Neuron service, prompts, model/tool execution,
+     AI response shaping, and — when the persistence ADR assigns it — Neuron's own
+     operation-state store (its own schema/migrations), not a backend pass-through.
+   - For AI companion or agentic features, include a dedicated Neuron contract
+     section in the feature assembly plan covering auth mode, engine data access,
+     persistence ownership, message/envelope shape, component/action contracts,
+     orchestration asset format, agent-delegation protocol (including A2A when
+     selected by ADR), tool/head registry, telemetry, prompt provenance, and
+     deferred AI surfaces.
    - Set integration checkpoints and completion criteria
    - Include frontend guardrails when applicable: semantic theme token usage, no raw palette UI classes, `lint:theme`, and light/dark visual smoke coverage for key screens
    - Include developer-owned fast-test expectations and required evidence artifacts when frontend or API behavior changes
@@ -355,6 +368,28 @@ Your architecture specifications will be consumed by **Phase C Implementation Ag
   - Integration points (how AI connects to main app)
   - MCP server specifications (if applicable)
   - Model selection criteria (complexity, latency, cost)
+- For AI companion or agentic features, also needs:
+  - The Neuron service boundary and ownership split relative to backend and
+    frontend implementation roles
+  - Auth mode for Neuron-to-backend calls, including whether user tokens are
+    forwarded or a service identity is used
+  - Persistence ownership for threads, messages, agent runs, tool calls, and
+    provenance (+ prompt/card version references): does the Neuron service own its
+    operation schema directly (its own migrations/persistence API) or use a
+    backend store? The Neuron *service* stays stateless either way — owning a store
+    is not the same as being stateful. When a single action writes both the AI
+    operation store and the business store, define the cross-store write-consistency
+    rule (e.g. business write authoritative and first; AI record references its id,
+    written idempotently)
+  - Versioned message envelope and component/action contract consumed by the
+    frontend renderer
+  - Orchestration contract, such as versioned YAML plans with schema validation,
+    registered tool/head names, trace metadata, and fallback behavior
+  - Agent-delegation protocol choice, including any A2A profile, Agent Card /
+    capability registry, task lifecycle, message/artifact mapping, and public
+    vs private exposure boundary
+  - MCP/tooling scope, including what is in the current feature and what is
+    deferred to external hosts or richer MCP UI surfaces
 - **What they'll build:** LLM integrations, agentic workflows, MCP servers, prompt templates
 - **Tech Stack:** Python, Claude API, Ollama, LangChain/LlamaIndex, FastAPI
 - **Reference:** `agents/ai-engineer/SKILL.md`
@@ -424,10 +459,15 @@ Before declaring work complete, verify each deliverable:
 7. Validate tracker consistency when planning trackers were touched during architecture updates (manually or by delegating `agents/product-manager/scripts/validate-trackers.py`)
 8. Verify feature assembly execution plan (`{PRODUCT_ROOT}/planning-mds/features/F{NNNN}-{slug}/feature-assembly-plan.md`) exists and is implementation-ready: every API endpoint has a corresponding Step with file paths, code signatures, logic flow, Casbin pattern, and HTTP response table. Cross-check against OpenAPI endpoints — no endpoint should be missing from the plan.
 9. Verify mutation traceability for every capture/edit/save/update/manage/submit/approve/assign/transition story: no read-only rendering can satisfy a mutation story unless explicitly marked read-only, and every mutation has endpoint/service/carrier/auth/concurrency/audit/test coverage.
-10. If inconsistencies found → fix, re-validate
-11. Complete post-session knowledge capture (responsibility #13) — save non-obvious decisions and gotchas to KG notes, ADRs, or feature docs
-12. Complete structural KG updates (responsibility #14) — add rationale entries for new ADRs, canonical nodes for new design elements, code-index bindings for new artifacts, and run `validate.py` clean
-13. Only declare Definition of Done when all cross-checks pass
+10. For AI companion or agentic features, verify the assembly plan includes
+   backend/frontend/AI sequencing plus explicit Neuron contracts for auth,
+   persistence, message envelopes, component actions, orchestration assets,
+   agent-delegation protocol/A2A profile when applicable, prompt provenance,
+   telemetry, and deferred AI surfaces.
+11. If inconsistencies found → fix, re-validate
+12. Complete post-session knowledge capture (responsibility #13) — save non-obvious decisions and gotchas to KG notes, ADRs, or feature docs
+13. Complete structural KG updates (responsibility #14) — add rationale entries for new ADRs, canonical nodes for new design elements, code-index bindings for new artifacts, and run `validate.py` clean
+14. Only declare Definition of Done when all cross-checks pass
 
 ## Definition of Done
 
