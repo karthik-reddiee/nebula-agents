@@ -27,7 +27,7 @@ Compatibility:
 - `PHASE=A` + `FEATURE_MODE=new` → plan creates `{FEATURE_PATH}` and scaffolds PRD, personas, stories, and the STATUS skeleton
 - `PHASE=A` + `FEATURE_MODE=existing` → plan updates existing planning artifacts; `STATUS.md` story provenance rows are append-only and must not be mutated
 - `PHASE=B` + `FEATURE_MODE=new` → REJECT: cannot run architecture before requirements exist; run `PHASE=A` or `PHASE=A+B` instead
-- `PHASE=B` + `FEATURE_MODE=existing` → plan updates `feature-assembly-plan.md` and ontology bindings
+- `PHASE=B` + `FEATURE_MODE=existing` → plan updates the architecture artifacts (ADRs, API/schema contracts, data model, BLUEPRINT §4) and ontology bindings
 - `PHASE=A+B` + `FEATURE_MODE=new` → plan creates `{FEATURE_PATH}`, then runs Phase A and Phase B sequentially
 - `PHASE=A+B` + `FEATURE_MODE=existing` → plan updates planning artifacts then architecture
 
@@ -54,16 +54,16 @@ Don't generate `{PLAN_RUN_ID}` with `uuid4` or any non-contract format. Don't wr
 
 Append every shell command to `{PLAN_RUN_FOLDER}/commands.log` as JSON Lines per the §13 schema.
 
-Keep ownership strict — product-manager owns Phase A: `PRD.md`, persona files, acceptance criteria, story breakdown, and the initial `STATUS.md` skeleton (Required Role Matrix and empty Story Provenance table). architect owns Phase B: `feature-assembly-plan.md`, ADRs, API/schema updates, `canonical-nodes.yaml` updates, `solution-ontology.yaml` updates, and `feature-mappings.yaml` additions. implementation agents do not run during the plan action, and other roles flag drift but do not silently redefine canonical shared semantics.
+Keep ownership strict — product-manager owns Phase A: `PRD.md`, persona files, acceptance criteria, story breakdown, and the initial `STATUS.md` skeleton (Required Role Matrix and empty Story Provenance table). architect owns Phase B: ADRs, API/schema updates, data model, BLUEPRINT §4, `canonical-nodes.yaml` updates, `solution-ontology.yaml` updates, and `feature-mappings.yaml` additions. The per-feature `feature-assembly-plan.md` is NOT a plan-action deliverable — it belongs to `agents/actions/feature.md` Step 0. implementation agents do not run during the plan action, and other roles flag drift but do not silently redefine canonical shared semantics.
 
 Follow these gates exactly:
 - `G1 CLARIFICATION` — Step 1.5 Requirements Clarification (PM resolves open requirement questions before approval)
 - `G2 TRACKER SYNC (A)` — Step 1.75 Mandatory tracker synchronization (REGISTRY.md / ROADMAP.md / BLUEPRINT.md / STORY-INDEX.md) before Phase A approval
 - `G3 PHASE A APPROVAL` — Step 2 user reviews requirements; PM records decision in `gate-decisions.md`
-- `G4 ONTOLOGY SYNC (B)` — Step 3.5 `feature-mappings.yaml`, `canonical-nodes.yaml`, and `solution-ontology.yaml` aligned with the assembly plan; `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-drift` exit 0
+- `G4 ONTOLOGY SYNC (B)` — Step 3.5 `feature-mappings.yaml`, `canonical-nodes.yaml`, and `solution-ontology.yaml` aligned with the Phase B architecture; `python3 {PRODUCT_ROOT}/scripts/kg/validate.py --check-drift` exit 0
 - `G5 PHASE B APPROVAL` — Step 4 user reviews architecture; architect records decision in `gate-decisions.md`
 
-Evidence outputs land in two places. In `{PLAN_RUN_FOLDER}`: the six base run files (`README.md`, `action-context.md`, `artifact-trace.md`, `gate-decisions.md`, `commands.log`, `lifecycle-gates.log`) plus an `Evidence Index` in `README.md` that points to the planning artifacts. In `{FEATURE_PATH}`: `PRD.md`, persona files, acceptance-criteria checklist, story files, `STATUS.md` skeleton (Phase A); `feature-assembly-plan.md`, ADRs, `README.md`, `GETTING-STARTED.md` (Phase B).
+Evidence outputs land in two places. In `{PLAN_RUN_FOLDER}`: the six base run files (`README.md`, `action-context.md`, `artifact-trace.md`, `gate-decisions.md`, `commands.log`, `lifecycle-gates.log`) plus an `Evidence Index` in `README.md` that points to the planning artifacts. In `{FEATURE_PATH}`: `PRD.md`, persona files, acceptance-criteria checklist, story files, `STATUS.md` skeleton (Phase A); ADRs, `README.md` (feature ERD + C4), `GETTING-STARTED.md` (Phase B). The per-feature `feature-assembly-plan.md` is produced later by `agents/actions/feature.md` Step 0, not the plan action.
 
 Stop immediately if PRD approval is refused, if architecture approval is refused, if the ontology sync gate fails and cannot be reconciled, if `kg/validate.py --check-drift` fails after one repair cycle, or if a canonical node edit is attempted outside Architect role.
 
