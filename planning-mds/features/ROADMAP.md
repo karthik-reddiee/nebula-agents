@@ -24,6 +24,7 @@ This roadmap sequences Nebula Agents work so the team can validate one delivery 
 |---------|--------|----------|----------------|
 | [F0003 - Local Agent Runtime Control Plane](./F0003-local-agent-runtime-control-plane/) | Planned | Add concrete local commands, status tools, evidence retrieval, summaries, metrics, and reviewed learning before managed orchestration becomes default. | F0001 session registry and transcript model are accepted or available as implementation dependencies. |
 | [F0002 - Managed Agent Orchestration](./F0002-managed-agent-orchestration/) | Planned | Add provider adapters and richer orchestration once tmux behavior and runtime control-plane contracts are understood and testable. | F0001 is implemented, F0003 runtime contracts are validated, and evidence shows native interactivity can be preserved or matched. |
+| [F0005 - Move-Invariant KG Feature-Doc References](./F0005-move-invariant-kg-doc-references/) | Planned | Independent platform-hardening track: governed feature closeout currently needs an off-book PM repoint of the architect-owned knowledge graph after the archive move (surfaced by F0038). | None — independent of the F0001 → F0003 → F0002 runtime line; reference implementation lands in a product repo's `scripts/kg/`. |
 
 ## Later
 

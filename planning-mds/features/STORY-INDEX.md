@@ -1,7 +1,7 @@
 # Story Index
 
-**Last Updated:** 2026-06-23
-**Total Stories:** 23
+**Last Updated:** 2026-07-03
+**Total Stories:** 27
 
 ## F0001 - Tmux-Native Agent Cockpit
 
@@ -45,6 +45,15 @@
 | [F0004-S0004](./F0004-reflective-learning-loop/F0004-S0004-curation-lifecycle-and-decay.md) | Curation lifecycle, counters, and supersession | Not Started | High |
 | [F0004-S0005](./F0004-reflective-learning-loop/F0004-S0005-strategy-selection-and-load-back.md) | Strategy selection and context load-back | Not Started | High |
 | [F0004-S0006](./F0004-reflective-learning-loop/F0004-S0006-boundary-and-genericness-gate.md) | Boundary, genericness, and lifecycle-gate enforcement | Not Started | High |
+
+## F0005 - Move-Invariant Knowledge-Graph Feature-Doc References
+
+| Story | Title | Status | Priority |
+|-------|-------|--------|----------|
+| [F0005-S0001](./F0005-move-invariant-kg-doc-references/F0005-S0001-feature-doc-reference-resolver.md) | Feature-doc reference resolver (dual-format, fail-loud) | Not Started | Critical |
+| [F0005-S0002](./F0005-move-invariant-kg-doc-references/F0005-S0002-migrate-feature-doc-refs-to-logical.md) | Migrate existing feature-doc references to logical form | Not Started | Critical |
+| [F0005-S0003](./F0005-move-invariant-kg-doc-references/F0005-S0003-enforce-logical-only-feature-doc-refs.md) | Enforce logical-only feature-doc references | Not Started | High |
+| [F0005-S0004](./F0005-move-invariant-kg-doc-references/F0005-S0004-reconcile-framework-contract-and-docs.md) | Reconcile framework contract, prompt, and KG docs | Not Started | High |
 
 ## Maintenance Rules
 

@@ -1,6 +1,6 @@
 # Nebula Agents Planning Blueprint
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-07-03
 
 ## Purpose
 
@@ -34,6 +34,12 @@ Nebula Agents should become an operator cockpit for high-quality agentic deliver
   - [F0004-S0004 - Curation lifecycle, counters, and supersession](features/F0004-reflective-learning-loop/F0004-S0004-curation-lifecycle-and-decay.md) - Not Started
   - [F0004-S0005 - Strategy selection and context load-back](features/F0004-reflective-learning-loop/F0004-S0005-strategy-selection-and-load-back.md) - Not Started
   - [F0004-S0006 - Boundary, genericness, and lifecycle-gate enforcement](features/F0004-reflective-learning-loop/F0004-S0006-boundary-and-genericness-gate.md) - Not Started
+
+- [F0005 - Move-Invariant Knowledge-Graph Feature-Doc References](features/F0005-move-invariant-kg-doc-references/README.md) - Planned / Next (Platform Hardening)
+  - [F0005-S0001 - Feature-doc reference resolver (dual-format, fail-loud)](features/F0005-move-invariant-kg-doc-references/F0005-S0001-feature-doc-reference-resolver.md) - Not Started
+  - [F0005-S0002 - Migrate existing feature-doc references to logical form](features/F0005-move-invariant-kg-doc-references/F0005-S0002-migrate-feature-doc-refs-to-logical.md) - Not Started
+  - [F0005-S0003 - Enforce logical-only feature-doc references](features/F0005-move-invariant-kg-doc-references/F0005-S0003-enforce-logical-only-feature-doc-refs.md) - Not Started
+  - [F0005-S0004 - Reconcile framework contract, prompt, and KG docs](features/F0005-move-invariant-kg-doc-references/F0005-S0004-reconcile-framework-contract-and-docs.md) - Not Started
 
 ## Validation Policy
 
