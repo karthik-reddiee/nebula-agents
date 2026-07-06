@@ -54,6 +54,12 @@ passing done-review) or record the maintainer's waiver + rationale in the run
 inputs. Missing both → halt; the evidence run records the missing gate.
 Nothing is merged.
 
+> **First post-train integration:** run it with **no blanket waiver** — supply a
+> real `REVIEW_VERDICT_REF` (or deliberately omit both to exercise the halt).
+> The Phase-A train ran under a train-wide waiver, so this gate's missing-verdict
+> halt has never fired live; the next run exercises and records it (maintainer
+> decision 2026-07-06 — see F0006 `STATUS.md` Deferred Non-Blocking Follow-ups).
+
 **I1 — Branch verification (bounce check).** On the *source branch's own*
 content: regenerate the generated projections from its sources and compare to
 its committed copies; scan for code-overlap with the integration branch.

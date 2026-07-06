@@ -121,6 +121,8 @@ is authoritative; this is the operator checklist). Serial: one run at a time.
 1. **Gate 1 — feature review.** Confirm a passing `feature-review` verdict for
    the source branch's feature, or decide and write a waiver with rationale.
    No verdict and no waiver → do not start the run.
+   *First post-train integration: no blanket waiver — use a real verdict so the
+   gate is exercised, not waived (maintainer decision 2026-07-06; F0006 STATUS).*
 2. **Run the integrator** via
    `agents/templates/prompts/evidence-contract/integrate-operator-friendly.md`
    with `SOURCE`, `INTEGRATION_BRANCH` (never `main`), and the verdict/waiver.

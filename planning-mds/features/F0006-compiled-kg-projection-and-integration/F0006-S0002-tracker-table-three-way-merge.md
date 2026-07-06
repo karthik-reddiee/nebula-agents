@@ -97,22 +97,24 @@ merging with table generation for feature tables).
 ## Questions & Assumptions
 
 **Open Questions:**
-- [ ] Home: `merge3.py --tracker` mode vs a sibling `merge3_trackers.py`. Prefer one CLI with
-      file-type detection, one conflict-report format.
+- [x] Home: `merge3.py --tracker` mode vs a sibling `merge3_trackers.py`. **Decided: one CLI** —
+      shipped as a `tracker_merge.py` module invoked through the `merge3.py` CLI with file-type
+      detection and the shared S0001 conflict-report format (see `STATUS.md` reference-implementation
+      progress).
 
 **Assumptions (to be validated):**
 - Tracker tables all carry the feature ID as the first column (true today in both repos).
 
 ## Definition of Done
 
-- [ ] Acceptance criteria met, including a replay of the PR #47 REGISTRY/ROADMAP resolution
+- [x] Acceptance criteria met, including a replay of the PR #47 REGISTRY/ROADMAP resolution
       producing the same union the PM agent hand-approved (F0038 row above F0021)
-- [ ] Unit tests: independent-row union, same-row divergence, section-move conflict,
+- [x] Unit tests: independent-row union, same-row divergence, section-move conflict,
       delete-vs-update, counter max-merge, canonical rendering idempotence
-- [ ] STORY-INDEX rejection test
-- [ ] Documented alongside merge3 usage
-- [ ] Story filename matches `Story ID` prefix
-- [ ] Story index regenerated or updated
+- [x] STORY-INDEX rejection test
+- [x] Documented alongside merge3 usage
+- [x] Story filename matches `Story ID` prefix
+- [x] Story index regenerated or updated
 
 ## Review Provenance
 

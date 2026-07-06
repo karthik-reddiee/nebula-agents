@@ -78,7 +78,8 @@ the integrator creates a dedicated integration branch per train; the promotion r
 ## Architecture Review
 
 **Phase B status:** Not Started
-**Execution Plan:** TBD
+**Execution Plan:** [PRD.md](./PRD.md) §Sequencing & Migration Plan, rows B1–B6 (S0004→S0009 with
+per-step exit proofs)
 
 ### Key Findings
 

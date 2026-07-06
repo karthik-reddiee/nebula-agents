@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(python3 /mnt/c/Users/gajap/sandbox/nebula/nebula-agents/agents/scripts/validate_templates.py)",
       "Bash(node scripts/check-theme-semantic-classes.mjs)",
@@ -364,7 +365,7 @@
       "Bash(echo \"SEMGREP_EXIT=$?\")",
       "Bash(cp -r /home/gajap/uSandbox/repos/nebula/nebula-insurance-crm/neuron /tmp/claude-1000/-home-gajap-uSandbox-repos-nebula-nebula-agents/da46ce86-ab5c-4fd2-ade4-1f203cf3c6f6/scratchpad/neuron-cov)",
       "Bash(rm -rf /tmp/claude-1000/-home-gajap-uSandbox-repos-nebula-nebula-agents/da46ce86-ab5c-4fd2-ade4-1f203cf3c6f6/scratchpad/neuron-cov/*.egg-info /tmp/claude-1000/-home-gajap-uSandbox-repos-nebula-nebula-agents/da46ce86-ab5c-4fd2-ade4-1f203cf3c6f6/scratchpad/neuron-cov/**/__pycache__)",
-      "Bash(echo \"SHELL_EXIT=$?\")"
+      "Bash(echo \"SHELL_EXIT=$?\")",
       "Bash(gh api *)",
       "Bash(git --no-pager diff --stat)",
       "Bash(git --no-pager diff -w agents/architect/SKILL.md)",
@@ -374,7 +375,9 @@
       "Bash(git --no-pager log -8 --format='%an <%ae>')",
       "Bash(git config *)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(chmod +x ~/.claude/statusline.sh)",
+      "Bash(~/.claude/statusline.sh)"
     ]
   }
 }

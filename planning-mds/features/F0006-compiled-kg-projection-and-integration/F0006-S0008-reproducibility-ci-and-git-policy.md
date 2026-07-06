@@ -49,8 +49,10 @@ PR #47 postmortem: archived feature ⇒ no non-archive feature path anywhere in 
   generated files during any local merge; the integrator's unconditional recompile overwrites the
   driver's result anyway (defense in depth — the driver is convenience, never correctness).
 - Tracker fenced-region integrity: markers missing/moved/hand-edited inside → reproducibility fail.
-- Rollout: workflow runs **warn-only** from B1 until the S0006 cutover lands, then flips blocking
-  (branch protection). The flip is a one-line change committed with the cutover.
+- Rollout: this workflow is a B5 deliverable, landing *after* the S0006 cutover (B3). It runs
+  **warn-only** for a shake-out window, then flips blocking (branch protection) — a one-line change.
+  The pre-CI window (the Phase-A train and B1–B4) is covered by the integrator's per-run recompile +
+  bounce (S0003), which is the same reproducibility check enforced at merge time.
 - Phase A interim (retrospective for the reference repo): before the compiler exists, the same
   workflow shape can check the *derived* files only (regenerate symbols/decisions/coverage/story-index
   and diff). In `nebula-insurance-crm` the merge train completed (2026-07-06) before S0008 was built,
@@ -72,13 +74,17 @@ N/A — CI + git configuration; no interactive surface.
 
 ## Data Requirements
 
-**Deliverables:** workflow file (from a new `ci-gates-template.yml` job template in
-`nebula-agents`); `.gitattributes` entries for every generated path (PRD §2 table); validator
-rules; override-trailer convention documented.
+**Deliverables:** a single shared generated-path manifest, `scripts/kg/generated_paths.yaml` (a
+flat list of every generated path; the PRD §2 "Generated projections" table is its authoritative
+content) — the one home the three consumers below read from; workflow file (from a new
+`ci-gates-template.yml` job template in `nebula-agents`); `.gitattributes` entries for every
+generated path, produced from the manifest (never hand-listed); validator rules; override-trailer
+convention documented.
 
 **Validation Rules:**
-- The generated-path list has one authoritative home (shared config consumed by CI,
-  `.gitattributes` generation, and the integrator) — no drift between three copies.
+- The generated-path list has one authoritative home — `scripts/kg/generated_paths.yaml` — consumed
+  by CI, `.gitattributes` generation, and the integrator; no second hand-maintained copy exists (a
+  CI check fails if `.gitattributes` drifts from the manifest).
 - Override use is visible: CI annotates the run; the integrator records it in evidence.
 
 ## Dependencies
@@ -91,7 +97,8 @@ F0006-S0007 (region integrity).
 
 1. Reproducibility is the *only* rule about committed generated files — no path-based commit bans
    that would break integrator runs or overrides.
-2. Warn-only before cutover, blocking after; never blocking while open PRs predate the policy.
+2. Warn-only for a shake-out window when the CI first lands (post-cutover), blocking thereafter;
+   never blocking while open PRs predate the policy.
 3. The merge driver is convenience; correctness comes solely from recompilation.
 
 ## Out of Scope
@@ -117,10 +124,11 @@ F0006-S0007 (region integrity).
 ## Definition of Done
 
 - [ ] Acceptance criteria met; red test (synthetic hand-edit) and green test recorded in CI
-- [ ] `.gitattributes` + shared generated-path config landed; integrator consumes the same list
+- [ ] `scripts/kg/generated_paths.yaml` manifest landed; `.gitattributes` generated from it; CI and
+      the integrator consume the same manifest (no second hand-maintained copy)
 - [ ] Validator rules landed with tests (physical-path ban, archived-consistency, ledger
       rationale, glob-match)
-- [ ] Warn-only → blocking flip executed with the S0006 cutover
+- [ ] Warn-only shake-out → blocking flip executed once the CI lands (post-cutover)
 - [ ] `ci-gates-template.yml` job template added in `nebula-agents`
 - [ ] Story filename matches `Story ID` prefix
 - [ ] Story index regenerated or updated

@@ -111,9 +111,10 @@ this tool), F0006-S0005 (canonical serializer shared with the compiler).
 ## Questions & Assumptions
 
 **Open Questions:**
-- [ ] ruamel.yaml (comment-preserving) vs PyYAML + generated section banners for the canonical
-      form. Leaning PyYAML + banners: comments in *generated* projections should themselves be
-      generated, and Phase B makes the files fully generated anyway.
+- [x] ruamel.yaml (comment-preserving) vs PyYAML + generated section banners for the canonical
+      form. **Decided: PyYAML + generated banners** — comments in *generated* projections should
+      themselves be generated, and Phase B makes the files fully generated anyway. Shipped
+      `kg_common.py` uses `yaml` with no ruamel dependency.
 
 **Assumptions (to be validated):**
 - Every record in the curated trio has a unique `id` (PR #47 review observed this; the tool must
@@ -121,17 +122,17 @@ this tool), F0006-S0005 (canonical serializer shared with the compiler).
 
 ## Definition of Done
 
-- [ ] Acceptance criteria met, including the PR #47 replay: re-serialization hunks converge; the
+- [x] Acceptance criteria met, including the PR #47 replay: re-serialization hunks converge; the
       known real deltas (F0038 archive repoints, `excluded_features` regression, stale `status`)
       surface as typed items
-- [ ] Canonical serializer landed in `kg_common.py`; one-time canonicalization commit made with
+- [x] Canonical serializer landed in `kg_common.py`; one-time canonicalization commit made with
       ID-level-diff proof of semantic no-change
-- [ ] Unit tests: converge-identical, one-sided, field-recurse, ordered-list conflict,
+- [x] Unit tests: converge-identical, one-sided, field-recurse, ordered-list conflict,
       delete-vs-update, orphan-edge, unique-violation, all-or-nothing, idempotent canonicalization
-- [ ] JSON conflict report consumed successfully by a sample evidence-run manifest
-- [ ] Documentation in the product repo's `scripts/kg/` README
-- [ ] Story filename matches `Story ID` prefix
-- [ ] Story index regenerated or updated
+- [x] JSON conflict report consumed successfully by a sample evidence-run manifest
+- [x] Documentation in the product repo's `scripts/kg/` README
+- [x] Story filename matches `Story ID` prefix
+- [x] Story index regenerated or updated
 
 ## Review Provenance
 
