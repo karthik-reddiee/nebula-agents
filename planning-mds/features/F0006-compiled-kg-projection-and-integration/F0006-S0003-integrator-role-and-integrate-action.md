@@ -189,7 +189,8 @@ curated trio (S0001) + tracker rows (S0002), then regenerate all derived outputs
       evidence template carries verdict/waiver and test-validation-outcome fields
 - [x] Branch strategy documented in `integrate.md`: integration-branch target (never `main`),
       `main`-promotion rule, steady-state dedicated-branch creation by the integrator
-- [x] The 7-PR merge train executed: 7 merges, 7 evidence runs, mainline green after each
+- [x] The 7-PR merge train executed: 7 merges, 9 evidence runs (dry-runs, halts, and re-runs each
+      leave an append-only run), mainline green after each
       (tracked as the feature's Phase-A exit in `STATUS.md`; later arrivals join the same train)
 - [ ] Contract-violation self-abort test (attempted source edit aborts the run) — *deferred with
       the human-gate tests above*

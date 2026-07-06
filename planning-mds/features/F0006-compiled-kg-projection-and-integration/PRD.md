@@ -423,7 +423,7 @@ open contributor PRs touch; migrating first would invalidate every open PR.
 |------|---------|-----------|
 | A1 (S0001, S0002) | `merge3.py` + tracker-row merge on the current monolithic graph | Replays the PR #47 resolution: re-serialization hunks converge; the known real deltas (F0038 archive repoints, `excluded_features` regression, stale `status`) surface as typed conflicts/reports |
 | A2 (S0003) | Integrator role, `integrate` action, evidence contract | Dry-run integration of PR #47 produces a complete evidence run |
-| A3 (operational) | Drain the queue: #47 → #51 → #50/#48/#49 → #53/#54 | 7 merged PRs, 7 integration evidence runs — each recording a feature-review verdict/waiver and a maintainer test-validation pass — mainline green |
+| A3 (operational) | Drain the queue: #47 → #51 → #50/#48/#49 → #53/#54 | 7 merged PRs, 9 integration evidence runs (more runs than PRs — dry-runs, halts, and re-runs each leave an append-only run) — each merge recording a feature-review verdict/waiver and a maintainer test-validation pass — mainline green |
 | B1 (S0004) | Shard schema + ownership spec; source/generated classification | Spec reviewed; every generated path classified (reproducibility enforcement deferred to B5) |
 | B2 (S0005) | `compile.py` + logical refs (F0005 absorbed) | Deterministic double-compile; resolver test matrix green |
 | B3 (S0006) | Decompiler: explode current graph → shards; round-trip proof | `compile(decompile(graph))` byte-identical; shards become truth; monolith becomes output |
@@ -483,7 +483,8 @@ single revert.
 | `planning-mds/kg-source/**` | **New** source layer (Phase B migration) |
 | `planning-mds/knowledge-graph/*` | Becomes fully generated (Phase B); `solution-ontology.yaml` rehomed to `kg-source/ontology/` |
 | `planning-mds/features/REGISTRY.md`, `ROADMAP.md` | Feature tables become generated regions (Phase B) |
-| `.gitattributes` | `linguist-generated` + merge driver on generated paths |
+| `scripts/kg/generated_paths.yaml` | **New** (Phase B, S0008): single authoritative list of every generated path (content per §2); consumed by CI, `.gitattributes` generation, and the integrator |
+| `.gitattributes` | `linguist-generated` + merge driver on generated paths (generated from `generated_paths.yaml`, never hand-listed) |
 | `.github/workflows/` | Reproducibility check — stood up at B5 (S0008); warn-only shake-out, then blocking post-cutover |
 | `CONTRIBUTING.md` / contributor docs | Shard-authoring flow; "never edit `knowledge-graph/*` by hand" |
 
