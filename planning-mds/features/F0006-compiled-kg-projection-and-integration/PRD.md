@@ -116,8 +116,9 @@ until S0004–S0009 land.
       (archived tables newest-first, feature-ID-descending tiebreak).
 - [x] The integrator role exists in `nebula-agents` (persona + `agent-map.yaml` + `integrate`
       action) and is the sole sanctioned writer of generated graph/tracker files on the mainline;
-      it never edits source-authored files; conflicts route to architect (nodes/bindings) or PM
-      (features/trackers) per the taxonomy.
+      it never authors source changes (never writes feature docs or `kg-source/` shards; the
+      curated KG trio and tracker tables change only via mechanical merge3/tracker convergence);
+      conflicts route to architect (nodes/bindings) or PM (features/trackers) per the taxonomy.
 - [x] All open `nebula-insurance-crm` contributor PRs (7 at planning time: #47–#51, #53, #54) are
       merged through integrator runs, each leaving an integration evidence run and a green
       `validate.py`.
@@ -423,11 +424,11 @@ open contributor PRs touch; migrating first would invalidate every open PR.
 | A1 (S0001, S0002) | `merge3.py` + tracker-row merge on the current monolithic graph | Replays the PR #47 resolution: re-serialization hunks converge; the known real deltas (F0038 archive repoints, `excluded_features` regression, stale `status`) surface as typed conflicts/reports |
 | A2 (S0003) | Integrator role, `integrate` action, evidence contract | Dry-run integration of PR #47 produces a complete evidence run |
 | A3 (operational) | Drain the queue: #47 → #51 → #50/#48/#49 → #53/#54 | 7 merged PRs, 7 integration evidence runs — each recording a feature-review verdict/waiver and a maintainer test-validation pass — mainline green |
-| B1 (S0004) | Shard schema + ownership spec; classify + CI *warnings* on generated-file hand-edits | Spec reviewed; warnings visible on PRs |
+| B1 (S0004) | Shard schema + ownership spec; source/generated classification | Spec reviewed; every generated path classified (reproducibility enforcement deferred to B5) |
 | B2 (S0005) | `compile.py` + logical refs (F0005 absorbed) | Deterministic double-compile; resolver test matrix green |
 | B3 (S0006) | Decompiler: explode current graph → shards; round-trip proof | `compile(decompile(graph))` byte-identical; shards become truth; monolith becomes output |
 | B4 (S0007) | Tracker generation (REGISTRY/ROADMAP tables) | Generated tables match hand-maintained state on cutover day |
-| B5 (S0008) | Reproducibility check → **blocking**; hand-edit guard; `.gitattributes` | CI red on synthetic hand-edit; green on compliant PR |
+| B5 (S0008) | Stand up reproducibility CI (warn-only shake-out → **blocking** post-cutover); hand-edit guard; `.gitattributes` | CI red on synthetic hand-edit; green on compliant PR |
 | B6 (S0009) | Contract/docs/templates reconciliation | No doc describes an off-book step; F0005 gap closed in prose |
 
 Rollback: Phase A tools are additive (no data change) — rollback is "stop using them." Phase B
@@ -440,7 +441,7 @@ single revert.
 |------|----------------|
 | Architect | Authors `nodes/`, `bindings/`, `policies/`, `ontology/` shards (G7); owns merge semantics for those kinds; resolves architect-routed conflicts |
 | Product Manager | Authors `features/` shards (path/status/depends_on — the single home); owns tracker prose; resolves PM-routed conflicts; archive = one shard edit |
-| **Integrator (new)** | Runs integration: semantic merge, unconditional recompile, validation, evidence; sole writer of generated files on mainline; never edits sources; verifies the feature-review gate before running and pauses for maintainer test validation before push |
+| **Integrator (new)** | Runs integration: semantic merge, unconditional recompile, validation, evidence; sole writer of generated files on mainline; never authors sources (mechanical merge3/tracker convergence only; never writes feature docs or `kg-source/` shards); verifies the feature-review gate before running and pauses for maintainer test validation before push |
 | Maintainer (human) | Runs the integrator serially; owns both human gates (feature-review waivers, test validation of the prepared merge); pushes the prepared merge; owns overrides |
 | Quality Engineer / Code Reviewer | Signoff on tools (merge determinism, round-trip, CI guards) |
 | DevOps | CI reproducibility workflow, `.gitattributes`, branch protections |
@@ -483,7 +484,7 @@ single revert.
 | `planning-mds/knowledge-graph/*` | Becomes fully generated (Phase B); `solution-ontology.yaml` rehomed to `kg-source/ontology/` |
 | `planning-mds/features/REGISTRY.md`, `ROADMAP.md` | Feature tables become generated regions (Phase B) |
 | `.gitattributes` | `linguist-generated` + merge driver on generated paths |
-| `.github/workflows/` | Reproducibility check (warn → blocking per migration step B1→B5) |
+| `.github/workflows/` | Reproducibility check — stood up at B5 (S0008); warn-only shake-out, then blocking post-cutover |
 | `CONTRIBUTING.md` / contributor docs | Shard-authoring flow; "never edit `knowledge-graph/*` by hand" |
 
 ## Risks & Assumptions
@@ -542,7 +543,9 @@ single revert.
   is the integrator's shakedown cruise. Pre-compiler, its "recompile" step means: regenerate the
   four derived files + `merge3.py` the curated trio + tracker rows. Every train car passes the two
   human gates: feature-review before its run, maintainer test validation before its push.
-- Phase B lands behind the round-trip proof; the reproducibility check runs warn-only until B5.
+- Phase B lands behind the round-trip proof; the reproducibility check is stood up at B5 (S0008) —
+  warn-only for a shake-out window, then blocking — with the integrator's per-run recompile + bounce
+  (S0003) covering the pre-CI window.
 - Other product repos adopt by applying B1–B5 with the same scripts; each adoption is tracked in
   that repo, not in this feature.
 - The compiled-projection spec (this PRD §§1–11) is the durable contract; if contributor volume

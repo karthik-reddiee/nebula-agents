@@ -105,14 +105,14 @@ merging with table generation for feature tables).
 
 ## Definition of Done
 
-- [ ] Acceptance criteria met, including a replay of the PR #47 REGISTRY/ROADMAP resolution
+- [x] Acceptance criteria met, including a replay of the PR #47 REGISTRY/ROADMAP resolution
       producing the same union the PM agent hand-approved (F0038 row above F0021)
-- [ ] Unit tests: independent-row union, same-row divergence, section-move conflict,
+- [x] Unit tests: independent-row union, same-row divergence, section-move conflict,
       delete-vs-update, counter max-merge, canonical rendering idempotence
-- [ ] STORY-INDEX rejection test
-- [ ] Documented alongside merge3 usage
-- [ ] Story filename matches `Story ID` prefix
-- [ ] Story index regenerated or updated
+- [x] STORY-INDEX rejection test
+- [x] Documented alongside merge3 usage
+- [x] Story filename matches `Story ID` prefix
+- [x] Story index regenerated or updated
 
 ## Review Provenance
 

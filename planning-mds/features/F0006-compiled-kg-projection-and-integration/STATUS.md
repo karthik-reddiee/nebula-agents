@@ -84,10 +84,11 @@ Complete this before moving `Overall Status` to `Done` or `Archived`.
 > **Required roles per story:** the roles listed for a story below are exactly those required for
 > that story — a role's absence means it is *not required* for that story, not that a signoff is
 > missing. QE's required scope is the merge tooling and replay/round-trip evidence (S0001, S0002,
-> S0005–S0008); the role/contract stories (S0003, S0009) require Architect + Code Reviewer.
-> This is why S0002 has no Architect row (it inherits S0001's merge semantics) and S0003 has no QE
-> row. Feature-level closeout still requires every role in "Required Signoff Roles" to hold at least
-> one story-level PASS.
+> S0005–S0008); the schema/spec story (S0004) and the role/contract stories (S0003, S0009) require
+> Architect + Code Reviewer but no QE — S0004 defines the `kg-source/` shard schema and ownership,
+> which is design + contract review rather than testable merge tooling. This is why S0002 has no
+> Architect row (it inherits S0001's merge semantics) and S0003/S0004 have no QE row. Feature-level
+> closeout still requires every role in "Required Signoff Roles" to hold at least one story-level PASS.
 
 | Story | Role | Reviewer | Verdict | Evidence | Date | Notes |
 |-------|------|----------|---------|----------|------|-------|
@@ -96,9 +97,10 @@ Complete this before moving `Overall Status` to `Done` or `Archived`.
 | F0006-S0001 | Architect | architect (delegated) | PASS | Merge semantics conform to PRD §7 tables; canonical serializer idempotent on all 3 curated files; canonicalization commit ID-level no-change proven (a718046); ORDERED_LIST_FIELDS registry matches schema | 2026-07-06 | — |
 | F0006-S0002 | Quality Engineer | quality-engineer (delegated) | PASS | 18/18 tracker tests green on `main`; PR #47 tracker replay reproduced the PM-published union (F0038 above F0021, date-desc/ID-desc); rendering idempotence verified | 2026-07-06 | — |
 | F0006-S0002 | Code Reviewer | code-reviewer (delegated) | PASS | `tracker_merge.py` reuses S0001 engine (no duplicated merge logic); per-table config incl. manual-order weave; STORY-INDEX rejection; fail-loud on unconfigured tables/unkeyed rows | 2026-07-06 | Prose unions during the train were maintainer-delegate weaves recorded per evidence run (PM-routed by design) |
-| F0006-S0003 | Architect | architect (delegated) | PASS | Contract shipped (SKILL/integrate.md/agent-map/templates/runbook, 1cacb7e); 7-PR train executed: 10 evidence runs, 2 halts routed per taxonomy (22 stale-record DivergentInserts → fixup; real ADR-029 collision → architect renumber to ADR-031); both human gates recorded every run; promotion e2f78be | 2026-07-06 | Gate-1 missing-verdict halt never exercised live (train-wide waiver used); gate-2 fail path never exercised (all passes) — both remain contract-text-only, revisit in first post-train integration |
-| F0006-S0003 | Code Reviewer | code-reviewer (delegated) | PASS | integrate.md I0–I6 procedure matches executed runs; evidence template fields all populated in 10 real runs; branch strategy (never `main`) held — `main` touched only by promotion merge | 2026-07-06 | Integration ran operator-driven (Claude as integrator + maintainer gates), not yet via the operator prompt end-to-end |
+| F0006-S0003 | Architect | architect (delegated) | PASS | Contract shipped (SKILL/integrate.md/agent-map/templates/runbook, 1cacb7e); 7-PR train executed: 9 evidence runs, 2 halts routed per taxonomy (22 stale-record DivergentInserts → fixup; real ADR-029 collision → architect renumber to ADR-031); both human gates recorded every run; promotion e2f78be | 2026-07-06 | Gate-1 missing-verdict halt never exercised live (train-wide waiver used); gate-2 fail path never exercised (all passes) — both remain contract-text-only, revisit in first post-train integration |
+| F0006-S0003 | Code Reviewer | code-reviewer (delegated) | PASS | integrate.md I0–I6 procedure matches executed runs; evidence template fields all populated in 9 real runs; branch strategy (never `main`) held — `main` touched only by promotion merge | 2026-07-06 | Integration ran operator-driven (Claude as integrator + maintainer gates), not yet via the operator prompt end-to-end |
 | F0006-S0004 | Architect | TBD | TBD | TBD | TBD | Pending implementation |
+| F0006-S0004 | Code Reviewer | TBD | TBD | TBD | TBD | Pending implementation |
 | F0006-S0005 | Quality Engineer | TBD | TBD | TBD | TBD | Pending implementation |
 | F0006-S0005 | Code Reviewer | TBD | TBD | TBD | TBD | Pending implementation |
 | F0006-S0005 | Architect | TBD | TBD | TBD | TBD | Pending implementation |
@@ -127,7 +129,7 @@ Complete this before moving `Overall Status` to `Done` or `Archived`.
 | Closeout review date | TBD (feature closes after Phase B) |
 | Total stories | 9 |
 | Stories completed | 3 / 9 |
-| Test count (unit + integration) | 45 unit (merge3 27 + tracker 18) + 10 integration evidence runs |
+| Test count (unit + integration) | 45 unit (merge3 27 + tracker 18) + 9 integration evidence runs |
 | Defects found during review | TBD |
 | Defects fixed before closeout | TBD |
 | Residual risks | TBD |
